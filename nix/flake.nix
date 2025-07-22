@@ -1,76 +1,68 @@
 {
-  description = "Iced example";
+  description = "Rust devshell for Iced";
 
   inputs = {
-    flake-parts.url = "github:hercules-ci/flake-parts";
-    cargo2nix.url = "github:cargo2nix/cargo2nix/release-0.12";
-    rust-overlay.url = "github:oxalica/rust-overlay";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = nixpkgs.lib.systems.flakeExposed;
-      perSystem = { self', pkgs, system, ... }:
-        let
-          rustVersion = "1.88.0";
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ inputs.cargo2nix.overlays.default (import inputs.rust-overlay) ];
+  outputs = { nixpkgs, rust-overlay, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+      in
+      with pkgs;
+      {
+        packages.default = pkgs.rustPlatform.buildRustPackage {
+          pname = "MC-Curie";
+          version = "0.1.0";
+
+          src = ./..;
+
+          cargoLock = {
+            lockFile = ../Cargo.lock;
           };
-          runtimeDeps = with pkgs; [
-            wayland
-            libxkbcommon
-            libGL
-          ];
 
-          rustPkgs = pkgs.rustBuilder.makePackageSet {
-            inherit rustVersion;
-            packageFun = import ./Cargo.nix;
-            packageOverrides = pkgs: pkgs.rustBuilder.overrides.all ++ [
-              (pkgs.rustBuilder.rustLib.makeOverride {
-                name = "counter";
-                overrideAttrs = drv: {
-                  propagatedNativeBuildInputs = drv.propagatedNativeBuildInputs or [ ] ++ (with pkgs; [
-                    pkg-config
-                    makeWrapper
-                  ] ++ runtimeDeps);
-                  postFixup = ''
-                    patchelf --set-rpath ${pkgs.lib.makeLibraryPath runtimeDeps} $bin/bin/counter
-                  '';
-                };
-              })
-            ];
-          };
-        in
-        {
-          packages = rec {
-            counter = (rustPkgs.workspace.counter { }).bin;
-            default = counter;
-          };
-          devShells.default = pkgs.mkShell rec {
-            buildInputs = with pkgs; [
-              pkg-config
-            ] ++ runtimeDeps ++ [
-              rust-analyzer-unwrapped
-              (rust-bin.stable.${rustVersion}.default.override { extensions = [ "rust-src" ]; })
+          buildInputs = [ ];
 
-              glib
-              atk
-              gtk3
-              # gtkd
-              clang
-              protobuf
-              xdo
-              xdot
-              xdotool
-              libayatana-appindicator
+          nativeBuildInputs = [ pkgs.pkg-config ];
 
-            ];
-            LD_LIBRARY_PATH = "${nixpkgs.lib.makeLibraryPath buildInputs}";
-            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
-
+          meta = with pkgs.lib; {
+            description = "MC_Curie";
+            license = licenses.mit;
+            maintainers = with maintainers; [ mxmf ];
           };
         };
-    };
+
+        devShells.default = mkShell rec {
+          buildInputs = [
+            rust-analyzer
+            rust-bin.stable.latest.default
+
+
+            python3
+            python3Packages.matplotlib
+            python3Packages.scipy
+            python3Packages.pyqt5
+            qt5.qtwayland
+            libsForQt5.qt5.qtbase
+
+
+            # pkg-config
+          ] ++ lib.optionals (stdenv.isLinux) [
+          ];
+
+          MPLBACKEND = "QtAgg";
+
+
+          LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
+
+
+        };
+      }
+    );
 }
