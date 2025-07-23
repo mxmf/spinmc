@@ -1,5 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
+use rand_core::SeedableRng;
+use rand_pcg::Pcg64Mcg;
 use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 use std::fs::File;
@@ -53,7 +55,9 @@ fn run_simulation(run_config: &Config) -> Type {
         .temperatures
         .par_iter()
         .map(|t| {
-            let rng = rand::rng();
+            // TODO add more  rng method
+            let rng = Pcg64Mcg::from_rng(&mut rand::rng());
+
             let mut grid = match run_config.model {
                 config::Model::Ising => Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone()),
                 _ => {

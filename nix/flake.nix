@@ -42,6 +42,7 @@
           buildInputs = [
             rust-analyzer
             rust-bin.stable.latest.default
+            cargo-flamegraph
 
 
             python3
