@@ -32,7 +32,7 @@
           nativeBuildInputs = [ pkgs.pkg-config ];
 
           meta = with pkgs.lib; {
-            description = "MC_Curie";
+            description = "mc_curie";
             license = licenses.mit;
             maintainers = with maintainers; [ mxmf ];
           };
@@ -43,6 +43,8 @@
             rust-analyzer
             rust-bin.stable.latest.default
             cargo-flamegraph
+            cargo-expand
+            cargo-show-asm
 
 
             python3
