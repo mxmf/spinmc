@@ -33,9 +33,12 @@ fn main() -> Result<()> {
         susceptibility: run_config.susceptibility,
         magnetization_abs: run_config.magnetization_abs,
         susceptibility_abs: run_config.susceptibility_abs,
+        group_magnetization: run_config.group_magnetization,
+        group_susceptibility: run_config.group_susceptibility,
+        group_num: run_config.group.len(),
     };
 
-    let results = run_simulation(&run_config)?;
+    let results = run_simulation(&run_config, &stats_config)?;
 
     let file = File::create(&run_config.outfile)?;
 
@@ -52,7 +55,7 @@ fn main() -> Result<()> {
 
 type Type = anyhow::Result<Vec<StatResult>>;
 
-fn run_simulation(run_config: &Config) -> Type {
+fn run_simulation(run_config: &Config, stats_config: &StatsConfig) -> Type {
     ThreadPoolBuilder::new()
         .num_threads(run_config.num_threads)
         .build_global()
@@ -67,7 +70,7 @@ fn run_simulation(run_config: &Config) -> Type {
 
             let (mut grid, mut stats) = match run_config.model {
                 config::Model::Ising => {
-                    let stats = Stats::new::<IsingSpin>(run_config, *t);
+                    let stats = Stats::new::<IsingSpin>(run_config, *t, stats_config.clone());
                     let grid = Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone());
                     (grid, stats)
                 }

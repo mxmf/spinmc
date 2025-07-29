@@ -39,6 +39,9 @@ pub struct Config {
     pub susceptibility: bool,
     pub magnetization_abs: bool,
     pub susceptibility_abs: bool,
+    pub group_magnetization: bool,
+    pub group_susceptibility: bool,
+    pub group: Vec<Vec<usize>>,
 }
 
 impl Config {
@@ -54,6 +57,9 @@ impl Config {
         let susceptibility = raw_config.output.susceptibility.unwrap_or_default();
         let magnetization_abs = raw_config.output.magnetization_abs.unwrap_or_default();
         let susceptibility_abs = raw_config.output.susceptibility_abs.unwrap_or_default();
+        let group_magnetization = raw_config.output.group_magnetization.unwrap_or_default();
+        let group_susceptibility = raw_config.output.group_susceptibility.unwrap_or_default();
+        let group = raw_config.output.group.unwrap_or_default();
 
         Ok(Self {
             dim: raw_config.grid.dim,
@@ -75,6 +81,9 @@ impl Config {
             susceptibility,
             magnetization_abs,
             susceptibility_abs,
+            group_magnetization,
+            group_susceptibility,
+            group,
         })
     }
 
