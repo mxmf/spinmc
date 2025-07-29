@@ -33,6 +33,12 @@ pub struct Config {
 
     //output
     pub outfile: String,
+    pub energy: bool,
+    pub heat_capacity: bool,
+    pub magnetization: bool,
+    pub susceptibility: bool,
+    pub magnetization_abs: bool,
+    pub susceptibility_abs: bool,
 }
 
 impl Config {
@@ -41,6 +47,13 @@ impl Config {
         let temperatures = Self::resolve_temperatures(&raw_config)?;
         let exchange_params = Self::resolve_exchange(&raw_config)?;
         let kb = raw_config.simulation.kb.unwrap_or(0.00008617333262145178);
+
+        let energy = raw_config.output.energy.unwrap_or_default();
+        let heat_capacity = raw_config.output.heat_capacity.unwrap_or_default();
+        let magnetization = raw_config.output.magnetization.unwrap_or_default();
+        let susceptibility = raw_config.output.susceptibility.unwrap_or_default();
+        let magnetization_abs = raw_config.output.magnetization_abs.unwrap_or_default();
+        let susceptibility_abs = raw_config.output.susceptibility_abs.unwrap_or_default();
 
         Ok(Self {
             dim: raw_config.grid.dim,
@@ -56,6 +69,12 @@ impl Config {
             num_threads: raw_config.simulation.num_threads,
             kb,
             outfile: raw_config.output.outfile,
+            energy,
+            heat_capacity,
+            magnetization,
+            susceptibility,
+            magnetization_abs,
+            susceptibility_abs,
         })
     }
 

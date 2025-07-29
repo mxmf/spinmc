@@ -79,6 +79,12 @@ pub struct Simulation {
 #[serde(rename_all = "snake_case")]
 pub struct Output {
     pub outfile: String,
+    pub energy: Option<bool>,
+    pub heat_capacity: Option<bool>,
+    pub magnetization: Option<bool>,
+    pub susceptibility: Option<bool>,
+    pub magnetization_abs: Option<bool>,
+    pub susceptibility_abs: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -104,16 +110,48 @@ impl RawConfig {
 impl RawConfig {
     pub fn validate(&mut self) -> anyhow::Result<()> {
         self.validate_grid()?;
+        self.validate_output()?;
         Ok(())
     }
 
-    fn validate_grid(&self) -> anyhow::Result<()> {
+    fn validate_grid(&mut self) -> anyhow::Result<()> {
         if self.grid.sublattices != self.grid.spin_magnitudes.len() {
             anyhow::bail!(
                 "spin_magnitude length ({}) does not match sublattices ({})",
                 self.grid.spin_magnitudes.len(),
                 self.grid.sublattices
             );
+        }
+
+        Ok(())
+    }
+    fn validate_output(&mut self) -> anyhow::Result<()> {
+        match self.output {
+            Output {
+                energy: None,
+                heat_capacity: None,
+                magnetization: None,
+                susceptibility: None,
+                magnetization_abs: None,
+                susceptibility_abs: None,
+                ..
+            } => {
+                panic!("No output fields specified: Please enable at least one observable.")
+            }
+
+            Output {
+                energy: Some(false),
+                heat_capacity: Some(false),
+                magnetization: Some(false),
+                susceptibility: Some(false),
+                magnetization_abs: Some(false),
+                susceptibility_abs: Some(false),
+                ..
+            } => {
+                panic!("No output fields specified: Please enable at least one observable.")
+            }
+
+            _ => {}
         }
         Ok(())
     }

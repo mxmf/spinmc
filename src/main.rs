@@ -7,10 +7,10 @@ use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use MC_Curie::{
+use mc_curie::{
     config::{self, Config},
     lattice::Grid,
-    monte_carlo::{Metropolis, MonteCarlo, Stats},
+    monte_carlo::{Metropolis, MonteCarlo, StatResult, Stats, StatsConfig},
     spin::IsingSpin,
 };
 
@@ -26,24 +26,31 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let run_config = Config::new(&args.config)?;
 
+    let stats_config = StatsConfig {
+        energy: run_config.energy,
+        heat_capacity: run_config.heat_capacity,
+        magnetization: run_config.magnetization,
+        susceptibility: run_config.susceptibility,
+        magnetization_abs: run_config.magnetization_abs,
+        susceptibility_abs: run_config.susceptibility_abs,
+    };
+
     let results = run_simulation(&run_config)?;
 
-    // todo Output struct and output writer
     let file = File::create(&run_config.outfile)?;
+
     let mut writer = BufWriter::new(file);
-    writeln!(
-        writer,
-        "# t: 温度, E: 平均能量(eV), Cv: 比热容(eV/K), M: 平均磁化强度, χ: 磁化率(eV^-1)"
-    )?;
-    for (t, e, cv, m, chi) in results.iter() {
-        writeln!(writer, "{t:.4}\t{e:.6}\t{cv:.6}\t{m:.6}\t{chi:.6}",)?;
+
+    writeln!(writer, "{stats_config}",)?;
+
+    for result in results.iter() {
+        writeln!(writer, "{result}",)?;
     }
 
     Ok(())
 }
 
-// todo output struct
-type Type = anyhow::Result<Vec<(f64, f64, f64, f64, f64)>>;
+type Type = anyhow::Result<Vec<StatResult>>;
 
 fn run_simulation(run_config: &Config) -> Type {
     ThreadPoolBuilder::new()
@@ -51,15 +58,19 @@ fn run_simulation(run_config: &Config) -> Type {
         .build_global()
         .unwrap();
 
-    let results = run_config
+    let results: Vec<StatResult> = run_config
         .temperatures
         .par_iter()
         .map(|t| {
             // TODO add more  rng method
             let rng = Pcg64Mcg::from_rng(&mut rand::rng());
 
-            let mut grid = match run_config.model {
-                config::Model::Ising => Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone()),
+            let (mut grid, mut stats) = match run_config.model {
+                config::Model::Ising => {
+                    let stats = Stats::new::<IsingSpin>(run_config, *t);
+                    let grid = Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone());
+                    (grid, stats)
+                }
                 _ => {
                     unimplemented!("xy and Heisenberg model")
                 }
@@ -72,20 +83,13 @@ fn run_simulation(run_config: &Config) -> Type {
                 mc.step(&mut grid);
             }
 
-            let mut stats = Stats::new(grid.size);
             for _ in 0..run_config.n_steps {
                 mc.step(&mut grid);
                 stats.record(&grid);
             }
-
-            (
-                *t,
-                stats.mean_energy(),
-                stats.specific_heat(beta),
-                stats.mean_magnetization(),
-                stats.susceptibility(beta),
-            )
+            stats.result()
         })
         .collect();
+
     Ok(results)
 }

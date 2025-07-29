@@ -6,20 +6,28 @@ pbc = [true, true, false]
 
 [simulation]
 initial_state = "z"
-model = "ising"       
-n_equil = 100000      
+model = "ising"
+n_equil = 10000
 n_steps = 100000
-# 手动指定温度列表（二选一，优先使用）
+# Manually specify the list of temperatures (choose one; this takes priority)
 # temperatures = []
-# 如果不写temperatures，则用下面区间自动生成
-temp_start = 41
+
+# If `temperatures` is not provided, generate it automatically using the following range settings
+temp_start = 10
 temp_end = 80
 temp_step = 1
 
-num_threads = 20
+num_threads = 10
 
 [output]
 outfile = "result.txt"
+energy = true
+heat_capacity = true
+magnetization = true
+susceptibility = true
+magnetization_abs = true
+susceptibility_abs = true
+
 
 [[exchange]]
 from_sub = 0
@@ -33,5 +41,3 @@ from_sub = 1
 to_sub = 0
 offsets = [[0, 0, 0], [-1, 0, 0], [0, -1, 0]]
 strength = 0.0013548
-
-

@@ -1,5 +1,5 @@
 [package]
-name = "MC-Curie"
+name = "mc_curie"
 version = "0.1.0"
 edition = "2024"
 authors = ["mxmf"]
@@ -19,3 +19,5 @@ toml = "0.9.2"
 [profile.release]
 codegen-units = 1
 lto = "fat"
+panic = "abort"
+strip = "symbols"

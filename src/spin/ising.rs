@@ -7,6 +7,9 @@ pub struct IsingSpin {
 }
 
 impl SpinState for IsingSpin {
+    fn zero() -> SpinVector {
+        SpinVector::Ising(0.)
+    }
     fn new_x(magnitude: f64) -> Self {
         Self {
             state: magnitude,

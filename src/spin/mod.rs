@@ -3,8 +3,8 @@ pub mod heisenberg;
 pub mod ising;
 pub mod xy;
 
-use std::iter::Sum;
-use std::ops::Add;
+use std::ops::{Add, Div, Mul};
+use std::{iter::Sum, ops::AddAssign};
 
 pub use ising::IsingSpin;
 
@@ -17,9 +17,29 @@ pub enum SpinVector {
     Heisenberg(f64, f64, f64),
 }
 
+impl AddAssign<&SpinVector> for SpinVector {
+    fn add_assign(&mut self, rhs: &Self) {
+        match (self, rhs) {
+            (SpinVector::Ising(a), SpinVector::Ising(b)) => {
+                *a += b;
+            }
+            (SpinVector::XY(ax, ay), SpinVector::XY(bx, by)) => {
+                *ax += bx;
+                *ay += by;
+            }
+            (SpinVector::Heisenberg(ax, ay, az), SpinVector::Heisenberg(bx, by, bz)) => {
+                *ax += bx;
+                *ay += by;
+                *az += bz;
+            }
+            _ => panic!("Cannot add-assign different spin types"),
+        }
+    }
+}
+
 impl SpinVector {
-    pub fn zero(&self) -> Self {
-        match self {
+    pub fn zero(kind: &SpinVector) -> Self {
+        match kind {
             SpinVector::Ising(_) => SpinVector::Ising(0.0),
             SpinVector::XY(_, _) => SpinVector::XY(0.0, 0.0),
             SpinVector::Heisenberg(_, _, _) => SpinVector::Heisenberg(0.0, 0.0, 0.0),
@@ -31,6 +51,13 @@ impl SpinVector {
             SpinVector::Ising(s) => s.abs(),
             SpinVector::XY(x, y) => (x.powi(2) + y.powi(2)).sqrt(),
             SpinVector::Heisenberg(x, y, z) => (x.powi(2) + y.powi(2) + z.powi(2)).sqrt(),
+        }
+    }
+    pub fn norm_sqr(&self) -> f64 {
+        match self {
+            SpinVector::Ising(s) => s.powi(2),
+            SpinVector::XY(x, y) => x.powi(2) + y.powi(2),
+            SpinVector::Heisenberg(x, y, z) => x.powi(2) + y.powi(2) + z.powi(2),
         }
     }
 }
@@ -49,6 +76,45 @@ impl Add for SpinVector {
     }
 }
 
+impl Mul<f64> for SpinVector {
+    type Output = SpinVector;
+
+    fn mul(self, rhs: f64) -> SpinVector {
+        match self {
+            SpinVector::Ising(s) => SpinVector::Ising(s * rhs),
+            SpinVector::XY(x, y) => SpinVector::XY(x * rhs, y * rhs),
+            SpinVector::Heisenberg(x, y, z) => SpinVector::Heisenberg(x * rhs, y * rhs, z * rhs),
+        }
+    }
+}
+
+impl Div<f64> for &SpinVector {
+    type Output = SpinVector;
+
+    fn div(self, rhs: f64) -> SpinVector {
+        if rhs == 0.0 {
+            panic!("Divide by zero in SpinVector");
+        }
+        match self {
+            SpinVector::Ising(s) => SpinVector::Ising(s / rhs),
+            SpinVector::XY(x, y) => SpinVector::XY(x / rhs, y / rhs),
+            SpinVector::Heisenberg(x, y, z) => SpinVector::Heisenberg(x / rhs, y / rhs, z / rhs),
+        }
+    }
+}
+
+impl Div<f64> for SpinVector {
+    type Output = SpinVector;
+
+    fn div(self, rhs: f64) -> SpinVector {
+        match self {
+            SpinVector::Ising(s) => SpinVector::Ising(s / rhs),
+            SpinVector::XY(x, y) => SpinVector::XY(x / rhs, y / rhs),
+            SpinVector::Heisenberg(x, y, z) => SpinVector::Heisenberg(x / rhs, y / rhs, z / rhs),
+        }
+    }
+}
+
 impl Sum for SpinVector {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let mut result = None;
@@ -60,7 +126,7 @@ impl Sum for SpinVector {
             };
         }
 
-        result.unwrap_or(SpinVector::Heisenberg(0.0, 0.0, 0.0))
+        result.unwrap()
     }
 }
 
@@ -69,6 +135,8 @@ pub trait SpinState: Clone + Send + Sync + 'static {
     fn new_y(magnitude: f64) -> Self;
     fn new_z(magnitude: f64) -> Self;
     fn new_random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self;
+
+    fn zero() -> SpinVector;
 
     fn magnitude(&self) -> f64;
 
