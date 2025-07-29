@@ -1,7 +1,6 @@
+mod internal;
 mod raw_config;
 
-mod config;
-
-pub use config::Config;
+pub use internal::Config;
 pub use raw_config::InitialState;
 pub use raw_config::Model;
