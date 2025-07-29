@@ -11,6 +11,9 @@ pub struct StatsConfig {
     pub susceptibility: bool,
     pub magnetization_abs: bool,
     pub susceptibility_abs: bool,
+    pub group_magnetization: bool,
+    pub group_susceptibility: bool,
+    pub group_num: usize,
 }
 
 impl fmt::Display for StatsConfig {
@@ -34,41 +37,15 @@ impl fmt::Display for StatsConfig {
         if self.susceptibility_abs {
             write!(f, "\t$|\\chi|$ ")?;
         }
-        Ok(())
-    }
-}
-#[derive(Debug, Default)]
-pub struct StatResult {
-    pub t: f64,
-    pub energy: Option<f64>,
-    pub specific_heat: Option<f64>,
-    pub magnetization: Option<f64>,      // |<M>| / N
-    pub susceptibility: Option<f64>,     // ( < M^2 > - <M>^2)/(N * k_B * T)
-    pub magnetization_abs: Option<f64>,  // < |M| >/ N
-    pub susceptibility_abs: Option<f64>, // ( < |M|^2 > - <M>^2)/(N * k_B * T)
-}
-
-impl fmt::Display for StatResult {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:.4}", self.t)?;
-        if let Some(e) = self.energy {
-            write!(f, "\t{e:.8}")?;
+        if self.group_magnetization {
+            for i in 0..self.group_num {
+                write!(f, "\tM$_{i}$ ($\\mu_B$)")?;
+            }
         }
-        if let Some(c) = self.specific_heat {
-            write!(f, "\t{c:.8}")?;
-        }
-
-        if let Some(m) = self.magnetization {
-            write!(f, "\t{m:.8}")?;
-        }
-        if let Some(chi) = self.susceptibility {
-            write!(f, "\t{chi:.8}")?;
-        }
-        if let Some(m_abs) = self.magnetization_abs {
-            write!(f, "\t{m_abs:.8}")?;
-        }
-        if let Some(ch_absi) = self.susceptibility_abs {
-            write!(f, "\t{ch_absi:.8}")?;
+        if self.group_susceptibility {
+            for i in 0..self.group_num {
+                write!(f, "\t$\\chi_{i}$ ")?;
+            }
         }
         Ok(())
     }
@@ -86,18 +63,19 @@ pub struct Stats {
     pub kb: f64,
     pub t: f64,
     pub stats_config: StatsConfig,
+    pub partial_m_sum: Vec<SpinVector>,
+    pub partial_m_2_sum: Vec<f64>,
+    pub partial_size: Vec<f64>,
 }
 
 impl Stats {
-    pub fn new<S: SpinState>(config: &Config, t: f64) -> Self {
-        let stats_config = StatsConfig {
-            energy: config.energy,
-            heat_capacity: config.heat_capacity,
-            magnetization: config.magnetization,
-            susceptibility: config.susceptibility,
-            magnetization_abs: config.magnetization_abs,
-            susceptibility_abs: config.susceptibility_abs,
-        };
+    pub fn new<S: SpinState>(config: &Config, t: f64, stats_config: StatsConfig) -> Self {
+        let size = (config.dim[0] * config.dim[1] * config.dim[2] * config.sublattices) as f64;
+        let partial_size = config
+            .group
+            .iter()
+            .map(|i| size / config.sublattices as f64 * i.len() as f64)
+            .collect();
         Self {
             energy_sum: 0.,
             energy2_sum: 0.,
@@ -107,8 +85,10 @@ impl Stats {
             steps: 0,
             kb: config.kb,
             t,
-
-            size: (config.dim[0] * config.dim[1] * config.dim[2] * config.sublattices) as f64,
+            size,
+            partial_m_sum: vec![S::zero(); stats_config.group_num],
+            partial_m_2_sum: vec![0.0; stats_config.group_num],
+            partial_size,
             stats_config,
         }
     }
@@ -139,6 +119,16 @@ impl Stats {
             }
             if self.stats_config.susceptibility || self.stats_config.susceptibility_abs {
                 self.m_2_sum += spin_vec.norm_sqr();
+            }
+        }
+
+        if self.stats_config.group_magnetization || self.stats_config.group_susceptibility {
+            for i in 0..self.stats_config.group_num {
+                let partial_spin_vec = grid.partial_spin_vector(i);
+                self.partial_m_sum[i] += &partial_spin_vec;
+                if self.stats_config.group_susceptibility {
+                    self.partial_m_2_sum[i] += partial_spin_vec.norm_sqr();
+                }
             }
         }
 
@@ -189,6 +179,35 @@ impl Stats {
             None
         };
 
+        let group_mag = if self.stats_config.group_magnetization {
+            Some(
+                self.partial_m_sum
+                    .iter()
+                    .zip(self.partial_size.iter())
+                    .map(|(m_sum, size)| (m_sum / self.steps as f64).norm() / size)
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
+        let group_sus = if self.stats_config.group_susceptibility {
+            Some(
+                self.partial_m_sum
+                    .iter()
+                    .zip(self.partial_m_2_sum.iter())
+                    .zip(self.partial_size.iter())
+                    .map(|((m_sum, m_2_sum), size)| {
+                        ((m_2_sum / self.steps as f64) - (m_sum / self.steps as f64).norm_sqr())
+                            / (self.kb * self.t)
+                            / size
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
         StatResult {
             t: self.t,
             energy,
@@ -197,6 +216,59 @@ impl Stats {
             susceptibility,
             magnetization_abs,
             susceptibility_abs,
+            group_mag,
+            group_sus,
         }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct StatResult {
+    pub t: f64,
+    pub energy: Option<f64>,
+    pub specific_heat: Option<f64>,
+    pub magnetization: Option<f64>,      // |<M>| / N
+    pub susceptibility: Option<f64>,     // ( < M^2 > - <M>^2)/(N * k_B * T)
+    pub magnetization_abs: Option<f64>,  // < |M| >/ N
+    pub susceptibility_abs: Option<f64>, // ( < |M|^2 > - <M>^2)/(N * k_B * T)
+    pub group_mag: Option<Vec<f64>>,
+    pub group_sus: Option<Vec<f64>>,
+}
+
+impl fmt::Display for StatResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:.4}", self.t)?;
+        if let Some(e) = self.energy {
+            write!(f, "\t{e:.8}")?;
+        }
+        if let Some(c) = self.specific_heat {
+            write!(f, "\t{c:.8}")?;
+        }
+
+        if let Some(m) = self.magnetization {
+            write!(f, "\t{m:.8}")?;
+        }
+        if let Some(chi) = self.susceptibility {
+            write!(f, "\t{chi:.8}")?;
+        }
+        if let Some(m_abs) = self.magnetization_abs {
+            write!(f, "\t{m_abs:.8}")?;
+        }
+        if let Some(chi_absi) = self.susceptibility_abs {
+            write!(f, "\t{chi_absi:.8}")?;
+        }
+
+        if let Some(group_m) = &self.group_mag {
+            for m in group_m {
+                write!(f, "\t{m:.8}")?;
+            }
+        }
+
+        if let Some(group_chi) = &self.group_sus {
+            for chi in group_chi {
+                write!(f, "\t{chi:.8}")?;
+            }
+        }
+        Ok(())
     }
 }

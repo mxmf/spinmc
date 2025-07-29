@@ -85,6 +85,9 @@ pub struct Output {
     pub susceptibility: Option<bool>,
     pub magnetization_abs: Option<bool>,
     pub susceptibility_abs: Option<bool>,
+    pub group_magnetization: Option<bool>,
+    pub group_susceptibility: Option<bool>,
+    pub group: Option<Vec<Vec<usize>>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -153,6 +156,24 @@ impl RawConfig {
 
             _ => {}
         }
+
+        if (self.output.group_magnetization == Some(true)
+            || self.output.group_susceptibility == Some(true))
+            && self.output.group.is_none()
+        {
+            panic!("you must specific group");
+        }
+
+        if let Some(group) = &self.output.group {
+            for i in group {
+                for j in i {
+                    if *j >= self.grid.sublattices {
+                        panic!("group_magnetization member{j} not in sublattices, check it")
+                    }
+                }
+            }
+        };
+
         Ok(())
     }
 }

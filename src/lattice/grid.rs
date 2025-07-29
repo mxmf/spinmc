@@ -1,8 +1,7 @@
-use itertools::{iproduct, zip_eq};
-
 use crate::calculators::{CalcInput, Hamiltonian, HamiltonianConfig};
 use crate::config::{Config, InitialState};
 use crate::spin::SpinState;
+use itertools::{iproduct, zip_eq};
 
 pub struct Grid<S: SpinState, R: rand::Rng> {
     pub size: usize,
@@ -10,6 +9,7 @@ pub struct Grid<S: SpinState, R: rand::Rng> {
     pub calc_inputs: Vec<CalcInput>,
     pub rng: R,
     pub hamiltonian: Hamiltonian,
+    pub group_index: Vec<Vec<usize>>,
 }
 
 impl<S: SpinState, R: rand::Rng> Grid<S, R> {
@@ -18,6 +18,23 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         let sublattices = config.sublattices;
         let mut spins = vec![];
         let total_sites = dim[0] * dim[1] * dim[2];
+        let mut group_index = Vec::new();
+
+        for sub_lattice_group in config.group {
+            let mut indexs = Vec::new();
+
+            for sub_lattice in sub_lattice_group {
+                for (x, y, z) in iproduct!(0..dim[0], 0..dim[1], 0..dim[2]) {
+                    indexs.push(coord_to_index(
+                        [x as isize, y as isize, z as isize],
+                        sub_lattice,
+                        dim,
+                        sublattices,
+                    ))
+                }
+            }
+            group_index.push(indexs);
+        }
 
         let mut calc_inputs: Vec<CalcInput> = vec![];
         for magnitude in &config.spin_magnitudes {
@@ -87,6 +104,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             spins,
             calc_inputs,
             hamiltonian,
+            group_index,
         }
     }
 
@@ -96,6 +114,14 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             .sum::<f64>()
             / 2.0
     }
+
+    pub fn partial_spin_vector(&self, index: usize) -> crate::spin::SpinVector {
+        self.group_index[index]
+            .iter()
+            .map(|i| self.spins[*i].spinvector())
+            .sum()
+    }
+
     pub fn total_spin_vector(&self) -> crate::spin::SpinVector {
         self.spins.iter().map(|spin| spin.spinvector()).sum()
     }
