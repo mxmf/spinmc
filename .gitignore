@@ -25,4 +25,4 @@ target
 
 /target
 .direnv
-**/result.txt
+**/result*.txt

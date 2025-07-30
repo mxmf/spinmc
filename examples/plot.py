@@ -1,5 +1,5 @@
-from tokenize import String
 import matplotlib.pyplot as plt
+import argparse
 import math
 import numpy as np
 from scipy.signal import find_peaks
@@ -20,16 +20,26 @@ def find_tc(t, y, ylabel):
 
 
 if __name__ == "__main__":
-    data = np.loadtxt("./result.txt", unpack=True)
+    parser = argparse.ArgumentParser(description="which file to plot")
+    parser.add_argument(
+        "--input_file",
+        "-i",
+        type=str,
+        help="which file to plot",
+        default="result.txt",
+    )
+    args = parser.parse_args()
+
+    data = np.loadtxt(args.input_file, unpack=True)
     t = data[0]
     ys = data[1:]
 
-    with open("result.txt", "r") as f_result:
+    with open(args.input_file, "r") as f_result:
         ylabels = f_result.readline().split("\t")[1:]
 
     assert len(ys) == len(ylabels)
     fig, axs = plt.subplots(math.ceil(len(ys) / 2), 2, layout="constrained")
-    axs = axs.flat
+    axs = np.array(axs).flatten()
 
     for ax, y, ylabel in zip(axs, ys, ylabels):
         ax.plot(t, y, marker=".")

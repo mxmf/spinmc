@@ -96,6 +96,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             }
 
             calc_input.exchange_neighbors = Some(exchange_neighbors);
+            calc_input.validate_exchange_neighbor();
         }
 
         Self {
