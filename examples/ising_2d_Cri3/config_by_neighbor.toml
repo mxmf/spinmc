@@ -1,0 +1,66 @@
+[grid]
+dim = [50, 50, 1]
+sublattices = 2
+spin_magnitudes = [1.5, 1.5]
+pbc = [true, true, false]
+
+[simulation]
+initial_state = "z"
+model = "ising"
+n_equil = 10000
+n_steps = 100000
+# Manually specify the list of temperatures (choose one; this takes priority)
+# temperatures = []
+
+# If `temperatures` is not provided, generate it automatically using the following range settings
+temp_start = 10
+temp_end = 80
+temp_step = 1
+
+num_threads = 10
+
+[output]
+outfile = "result_by_neighbor.txt"
+energy = true
+heat_capacity = true
+magnetization = true
+susceptibility = true
+magnetization_abs = true
+susceptibility_abs = true
+
+
+[[exchange]]
+strength = 0.0013548
+neighbor_order = 1
+
+[structure]
+cell = [
+  [
+    7.0000000000000000,
+    0.0000000000000000,
+    0.0000000000000000,
+  ],
+  [
+    -3.4999999999999982,
+    6.0621778264910713,
+    0.0000000000000000,
+  ],
+  [
+    0.0000000000000000,
+    0.0000000000000000,
+    20.0000000000000000,
+  ],
+]
+
+positions = [
+  [
+    3.4999999999999756,
+    2.0207259421637049,
+    10.0000005839508788,
+  ],
+  [
+    0.0000000000000261,
+    4.0414518843273664,
+    10.0000010929559835,
+  ],
+]

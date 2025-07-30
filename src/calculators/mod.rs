@@ -1,4 +1,5 @@
 use crate::spin::SpinState;
+use std::collections::HashSet;
 
 #[derive(Clone, Debug, Default)]
 pub struct CalcInput {
@@ -6,6 +7,23 @@ pub struct CalcInput {
     pub dm_neighbors: Option<Vec<(usize, [f64; 3], f64)>>,
     pub magnetic_field: Option<[f64; 3]>,
     pub easy_axis: Option<[f64; 3]>,
+}
+
+impl CalcInput {
+    pub fn validate_exchange_neighbor(&self) -> bool {
+        let pairs = &self.exchange_neighbors;
+        if let Some(vec) = pairs {
+            let mut seen = HashSet::new();
+            for (index, _) in vec {
+                if !seen.insert(index) {
+                    panic!(
+                        "Duplicate neighbor indices found in your exchange coupling configuration. Please ensure all neighbor indices are unique."
+                    );
+                }
+            }
+        }
+        true
+    }
 }
 
 fn exchange_energy<S: SpinState>(spin: &S, calc_input: &CalcInput, spins: &[S]) -> f64 {

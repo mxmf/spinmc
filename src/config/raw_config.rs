@@ -10,8 +10,8 @@ pub struct Grid {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Exchange {
-    pub from_sub: usize,
-    pub to_sub: usize,
+    pub from_sub: Option<usize>,
+    pub to_sub: Option<usize>,
 
     pub offsets: Option<Vec<[isize; 3]>>,
     pub neighbor_order: Option<usize>,
@@ -76,6 +76,13 @@ pub struct Simulation {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct Structure {
+    pub cell: [[f64; 3]; 3],
+    pub positions: Vec<[f64; 3]>,
+    pub tolerance: Option<f64>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Output {
     pub outfile: String,
@@ -100,6 +107,7 @@ pub struct RawConfig {
     pub dm: Option<Vec<DM>>,
     pub zeeman: Option<Zeeman>,
     pub anisotropy: Option<Anisotropy>,
+    pub structure: Option<Structure>,
 }
 
 impl RawConfig {

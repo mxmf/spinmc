@@ -1,4 +1,5 @@
 use super::raw_config::Model;
+use crate::lattice::Atoms;
 
 pub use super::raw_config::InitialState;
 use super::raw_config::RawConfig;
@@ -124,36 +125,75 @@ impl Config {
         let mut exchange_params = vec![];
         if let Some(exchange_raws) = &raw_config.exchange {
             for exchange_raw in exchange_raws {
-                let (from_sub, to_sub, offsets, neighbor_order, strength) = (
+                let (from_sub, to_sub, offsets, neighbor_order, strength, structure) = (
                     &exchange_raw.from_sub,
                     &exchange_raw.to_sub,
                     &exchange_raw.offsets,
                     &exchange_raw.neighbor_order,
                     &exchange_raw.strength,
+                    &raw_config.structure,
                 );
 
-                match (offsets, neighbor_order) {
-                    (Some(offsets), None) => {
-                        exchange_params.push(ExchangeParams {
-                            from_sub: *from_sub,
-                            to_sub: *to_sub,
-                            offsets: offsets.clone(),
-                            strength: *strength,
-                        });
+                match (from_sub, to_sub, offsets, neighbor_order, structure) {
+                    (_, _, Some(_), Some(_), _) => {
+                        panic!(
+                            "Invalid configuration: do not set both `offsets` and `neighbor_order`; only one should be specified."
+                        )
                     }
-                    (None, Some(_neighbor_order)) => {
-                        unimplemented!("neighbor to offsets")
+                    (_, _, None, None, _) => {
+                        panic!(
+                            "Missing configuration: you must specify either `offsets` or `neighbor_order`."
+                        )
+                    }
+                    (_, _, _, Some(_), None) => {
+                        panic!(
+                            "Incomplete configuration: when using `neighbor_order`, `structure` must be set."
+                        )
+                    }
+                    (from_sub, to_sub, Some(offsets), None, _) => {
+                        if let (Some(from_sub), Some(to_sub)) = (from_sub, to_sub) {
+                            exchange_params.push(ExchangeParams {
+                                from_sub: *from_sub,
+                                to_sub: *to_sub,
+                                offsets: offsets.clone(),
+                                strength: *strength,
+                            });
+                        } else {
+                            panic!(
+                                "Incomplete configuration: when using `offsets`, both `from_sub` and `to_sub` must be specified."
+                            )
+                        }
                     }
 
-                    (Some(_), Some(_)) => {
-                        return Err(anyhow::anyhow!(
-                            "Cannot specify both `offsets` and `neighbor_order` — they are mutually exclusive."
-                        ));
-                    }
-                    (None, None) => {
-                        return Err(anyhow::anyhow!(
-                            "You must specify either `offsets` or `neighbor_order` in exchange rule."
-                        ));
+                    (from_sub, to_sub, None, Some(neighbor_order), Some(structure)) => {
+                        let atoms = Atoms {
+                            cell: structure.cell,
+                            positions: structure.positions.clone(),
+                            pbc: raw_config.grid.pbc,
+                            tolerance: structure.tolerance.unwrap_or(0.0001),
+                        };
+
+                        let neighbors = match (from_sub, to_sub) {
+                            (Some(from), Some(to)) => {
+                                atoms.find_neighbors_from_to(*from, *to, *neighbor_order)
+                            }
+                            (Some(from), None) => atoms.find_neighbors_from(*from, *neighbor_order),
+                            (None, None) => atoms.find_neighbors_all(*neighbor_order),
+                            (None, Some(_)) => {
+                                panic!(
+                                    "Invalid configuration: `from_sub` must be specified when using `neighbor_order`."
+                                );
+                            }
+                        };
+
+                        for neighbor in neighbors {
+                            exchange_params.push(ExchangeParams {
+                                from_sub: neighbor.from,
+                                to_sub: neighbor.to,
+                                offsets: vec![neighbor.offset],
+                                strength: *strength,
+                            });
+                        }
                     }
                 }
             }

@@ -1,0 +1,35 @@
+[grid]
+dim = [25, 25, 1]
+sublattices = 4
+spin_magnitudes = [1.0, 1.0, 1.0, 1.0]
+pbc = [true, true, false]
+
+[simulation]
+initial_state = "z"
+kb = 1
+model = "ising"
+n_equil = 10000
+n_steps = 100000
+temp_start = 1
+temp_end = 3
+temp_step = 0.05
+
+num_threads = 10
+
+[output]
+outfile = "result_by_neighbor.txt"
+energy = true
+heat_capacity = true
+group_magnetization = true
+group_susceptibility = true
+group = [[0, 3], [1, 2]]
+
+
+[[exchange]]
+strength = -1.0
+neighbor_order = 1
+
+[structure]
+cell = [[2,0,0],[0,2,0],[0,0,1]]
+positions = [[0,0,0],[1,0,0],[0,1,0],[1,1,0]]
+
