@@ -1,5 +1,6 @@
 use super::raw_config::Model;
 use crate::lattice::Atoms;
+use std::fmt;
 
 pub use super::raw_config::InitialState;
 use super::raw_config::RawConfig;
@@ -199,5 +200,98 @@ impl Config {
             }
         }
         Ok(exchange_params)
+    }
+}
+
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut hamiltonian = String::new();
+        if !self.exchange_params.is_empty() {
+            hamiltonian += "-∑⟨i,j⟩ Jᵢⱼ Sᵢ · Sⱼ";
+        }
+        // TODO more hamiltonian term
+
+        writeln!(f, "\n=== Simulation Configuration ===")?;
+        writeln!(f, "Hamiltonian: H = {hamiltonian}")?;
+        writeln!(f, "\nGrid:")?;
+        writeln!(f, "  Dimension: {:?}, PBC: {:?}", self.dim, self.pbc)?;
+        writeln!(f, "  Sublattices: {}", self.sublattices)?;
+        writeln!(f, "  Spin Magnitudes: {:?}", self.spin_magnitudes)?;
+
+        writeln!(f, "\nExchange Parameters:")?;
+        writeln!(
+            f,
+            "{:<4} | {:<3} | {:>3} {:>3} {:>3}  | {:>12}",
+            "from", "to", "x", "y", "z", "strength (eV)"
+        )?;
+        for params in &self.exchange_params {
+            let (from_sub, to_sub, strength) = (params.from_sub, params.to_sub, params.strength);
+
+            for offset in &params.offsets {
+                writeln!(
+                    f,
+                    "{from_sub:<4} | {to_sub:<3} | {:>3} {:>3} {:>3}  | {strength:>8.12}",
+                    offset[0], offset[1], offset[2]
+                )?;
+            }
+        }
+
+        writeln!(f, "\nSimulation Parameters:")?;
+        writeln!(f, "  Initial State: {:?}", self.initial_state)?;
+        writeln!(f, "  Model: {:?}", self.model)?;
+        writeln!(f, "  Equilibration Steps: {}", self.n_equil)?;
+        writeln!(f, "  Simulation Steps: {}", self.n_steps)?;
+        writeln!(f, "  Boltzmann Constant (kB): {} (eV/K)", self.kb)?;
+        writeln!(f, "  Threads: {}", self.num_threads)?;
+
+        write!(f, "Temperatures (K):\n  ")?;
+        for t in &self.temperatures {
+            write!(f, "{t:.4}   ")?;
+        }
+        writeln!(f)?;
+
+        writeln!(f, "\nOutput:")?;
+        writeln!(f, "  Output File: {}", self.outfile)?;
+
+        writeln!(
+            f,
+            "  Energy [E = <H> / N = < {} >/N]: {}",
+            hamiltonian, self.energy
+        )?;
+        writeln!(
+            f,
+            "  Heat Capacity [ C = (⟨E²⟩ - ⟨E⟩²) / (N kB T²) ]: {}",
+            self.heat_capacity
+        )?;
+        writeln!(
+            f,
+            "  Magnetization [ M = ⟨Σ s_i⟩ / N ] : {}",
+            self.magnetization
+        )?;
+        writeln!(
+            f,
+            "  Susceptibility [ χ = (⟨M²⟩ - ⟨M⟩²) / (N kB T) ]: {}",
+            self.susceptibility
+        )?;
+        writeln!(
+            f,
+            "  Magnetization_abs [M = ⟨|Σ s_i|⟩ / N]: {}",
+            self.magnetization_abs
+        )?;
+        writeln!(
+            f,
+            "  susceptibility_abs [  χ(|M|) = (⟨|M|²⟩ - ⟨|M|⟩²) / (N kB T) ]: {}",
+            self.susceptibility_abs
+        )?;
+        writeln!(f, "  Group Magnetization: {}", self.group_magnetization)?;
+        writeln!(f, "  Group Susceptibility: {}", self.group_susceptibility)?;
+        if self.group_magnetization || self.group_susceptibility {
+            writeln!(f, "  Groups:")?;
+            for (i, group) in self.group.iter().enumerate() {
+                writeln!(f, "    Group {i}: {group:?}")?;
+            }
+        }
+
+        Ok(())
     }
 }

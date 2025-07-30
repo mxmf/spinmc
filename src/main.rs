@@ -6,6 +6,8 @@ use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use tracing::info;
+use tracing_subscriber::FmtSubscriber;
 
 use mc_curie::{
     config::{self, Config},
@@ -25,6 +27,12 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
     let run_config = Config::new(&args.config)?;
+
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(tracing::Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    info!("{run_config}");
 
     let stats_config = StatsConfig {
         energy: run_config.energy,
@@ -61,6 +69,7 @@ fn run_simulation(run_config: &Config, stats_config: &StatsConfig) -> Type {
         .build_global()
         .unwrap();
 
+    info!("Start run simulations");
     let results: Vec<StatResult> = run_config
         .temperatures
         .par_iter()
@@ -90,6 +99,7 @@ fn run_simulation(run_config: &Config, stats_config: &StatsConfig) -> Type {
                 mc.step(&mut grid);
                 stats.record(&grid);
             }
+            info!("Simulation on temperature {t} K fininshed");
             stats.result()
         })
         .collect();
