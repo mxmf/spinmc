@@ -46,6 +46,9 @@
             cargo-expand
             cargo-show-asm
 
+            hdf5
+            pkg-config
+
 
             python3
             python3Packages.matplotlib
