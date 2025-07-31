@@ -1,15 +1,26 @@
 use crate::spin::SpinState;
 use std::collections::HashSet;
 
-#[derive(Clone, Debug, Default)]
-pub struct CalcInput {
-    pub exchange_neighbors: Option<Vec<(usize, f64)>>,
+#[derive(Clone, Debug)]
+pub struct CalcInput<S: SpinState> {
+    pub exchange_neighbors: Option<Vec<(*const S, f64)>>,
     pub dm_neighbors: Option<Vec<(usize, [f64; 3], f64)>>,
     pub magnetic_field: Option<[f64; 3]>,
     pub easy_axis: Option<[f64; 3]>,
 }
 
-impl CalcInput {
+impl<S: SpinState> Default for CalcInput<S> {
+    fn default() -> Self {
+        CalcInput {
+            exchange_neighbors: None,
+            dm_neighbors: None,
+            magnetic_field: None,
+            easy_axis: None,
+        }
+    }
+}
+
+impl<S: SpinState> CalcInput<S> {
     pub fn validate_exchange_neighbor(&self) -> bool {
         let pairs = &self.exchange_neighbors;
         if let Some(vec) = pairs {
@@ -26,23 +37,30 @@ impl CalcInput {
     }
 }
 
-fn exchange_energy<S: SpinState>(spin: &S, calc_input: &CalcInput, spins: &[S]) -> f64 {
+fn exchange_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
     if let Some(list) = calc_input.exchange_neighbors.as_ref() {
-        list.iter().map(|(n, j)| -j * spin.dot(&spins[*n])).sum()
+        list.iter()
+            .map(|(n, j)| {
+                unsafe {
+                    let neighbor = &*(*n); // *n 是 *const S，解引用为 &S
+                    -j * spin.dot(neighbor)
+                }
+            })
+            .sum()
     } else {
         0.0
     }
 }
 
-fn zeeman_energy<S: SpinState>(_: &S, _: &CalcInput) -> f64 {
+fn zeeman_energy<S: SpinState>(_: &S, _: &CalcInput<S>) -> f64 {
     unimplemented!();
 }
 
-fn anisotropy_energy<S: SpinState>(_: &S, _: &CalcInput) -> f64 {
+fn anisotropy_energy<S: SpinState>(_: &S, _: &CalcInput<S>) -> f64 {
     unimplemented!();
 }
 
-fn dm_energy<S: SpinState>(_: &S, _: &CalcInput, _: &[S]) -> f64 {
+fn dm_energy<S: SpinState>(_: &S, _: &CalcInput<S>, _: &[S]) -> f64 {
     unimplemented!();
 }
 
@@ -63,10 +81,10 @@ impl Hamiltonian {
         Self { config }
     }
 
-    pub fn compute<S: SpinState>(&self, spin: &S, calc_input: &CalcInput, spins: &[S]) -> f64 {
+    pub fn compute<S: SpinState>(&self, spin: &S, calc_input: &CalcInput<S>, spins: &[S]) -> f64 {
         let mut result = 0.0;
         if self.config.exchange_enable {
-            result += exchange_energy(spin, calc_input, spins);
+            result += exchange_energy(spin, calc_input);
         }
 
         if self.config.zeeman_enable {

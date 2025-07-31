@@ -70,7 +70,7 @@ impl SpinState for IsingSpin {
 
     fn energy_diff(
         &self,
-        calc_input: &crate::calculators::CalcInput,
+        calc_input: &crate::calculators::CalcInput<IsingSpin>,
         ham: &crate::calculators::Hamiltonian,
         spins: &[Self],
         _old_spin: &Self,

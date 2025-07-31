@@ -150,12 +150,12 @@ pub trait SpinState: Clone + Send + Sync + 'static {
 
     fn dot(&self, other: &Self) -> f64;
 
-    fn energy(&self, calc_input: &CalcInput, ham: &Hamiltonian, spins: &[Self]) -> f64 {
+    fn energy(&self, calc_input: &CalcInput<Self>, ham: &Hamiltonian, spins: &[Self]) -> f64 {
         ham.compute(self, calc_input, spins)
     }
     fn energy_diff(
         &self,
-        calc_input: &CalcInput,
+        calc_input: &CalcInput<Self>,
         ham: &Hamiltonian,
         spins: &[Self],
         old_spin: &Self,

@@ -6,7 +6,7 @@ use itertools::{iproduct, zip_eq};
 pub struct Grid<S: SpinState, R: rand::Rng> {
     pub size: usize,
     pub spins: Vec<S>,
-    pub calc_inputs: Vec<CalcInput>,
+    pub calc_inputs: Vec<CalcInput<S>>,
     pub rng: R,
     pub hamiltonian: Hamiltonian,
     pub group_index: Vec<Vec<usize>>,
@@ -36,7 +36,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             group_index.push(indexs);
         }
 
-        let mut calc_inputs: Vec<CalcInput> = vec![];
+        let mut calc_inputs: Vec<CalcInput<S>> = vec![];
         for magnitude in &config.spin_magnitudes {
             let new_spin = match config.initial_state {
                 InitialState::Random => S::new_z(*magnitude),
@@ -89,7 +89,8 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                             config.pbc,
                         );
                         if let Some(offset_index) = offset_index_opt {
-                            exchange_neighbors.push((offset_index, exchange_param.strength));
+                            exchange_neighbors
+                                .push((&spins[offset_index] as *const S, exchange_param.strength));
                         }
                     }
                 }
