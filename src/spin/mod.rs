@@ -130,7 +130,7 @@ impl Sum for SpinVector {
     }
 }
 
-pub trait SpinState: Clone + Send + Sync + 'static {
+pub trait SpinState: Default + Clone + Send + Sync + 'static {
     fn new_x(magnitude: f64) -> Self;
     fn new_y(magnitude: f64) -> Self;
     fn new_z(magnitude: f64) -> Self;
