@@ -108,6 +108,9 @@ pub struct RawConfig {
     pub zeeman: Option<Zeeman>,
     pub anisotropy: Option<Anisotropy>,
     pub structure: Option<Structure>,
+
+    #[cfg(feature = "snapshots")]
+    pub snapshots: Option<crate::snapshots::Snapshots>,
 }
 
 impl RawConfig {

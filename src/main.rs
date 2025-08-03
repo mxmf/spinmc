@@ -91,28 +91,53 @@ fn run_simulation(run_config: &Config, stats_config: &StatsConfig) -> Type {
             let beta = 1. / (run_config.kb * t);
             let mut mc = Metropolis { rng, beta };
 
-            let mut equil_snapshots = vec![];
-            let mut steps_snapshots = vec![];
+            #[cfg(feature = "snapshots")]
+            let (mut equil_snapshots, mut steps_snapshots) = (vec![], vec![]);
 
-            for _ in 0..run_config.n_equil {
+            for step in 0..run_config.n_equil {
                 mc.step(&mut grid);
                 #[cfg(feature = "snapshots")]
-                equil_snapshots.push(grid.spins_to_array());
+                {
+                    if run_config.snapshot_enable
+                        && run_config.snapshot_params.snapshot_equil_interval > 0
+                        && step % run_config.snapshot_params.snapshot_equil_interval == 0
+                    {
+                        equil_snapshots.push(grid.spins_to_array());
+                    }
+                }
             }
 
-            for _ in 0..run_config.n_steps {
+            for step in 0..run_config.n_steps {
                 mc.step(&mut grid);
                 stats.record(&grid);
-                steps_snapshots.push(grid.spins_to_array());
+
+                #[cfg(feature = "snapshots")]
+                if run_config.snapshot_enable
+                    && run_config.snapshot_params.snapshot_equil_interval > 0
+                    && step % run_config.snapshot_params.snapshot_equil_interval == 0
+                {
+                    steps_snapshots.push(grid.spins_to_array());
+                }
             }
-            info!("Simulation on temperature {t:.4} K fininshed");
+            info!("Simulation at temperature {t:.4} K fininshed");
 
             #[cfg(feature = "snapshots")]
-            let _ = mc_curie::snapshots::save_snapshots_to_hdf5(
-                &format!("T_{t:.4}.h5"),
-                &equil_snapshots,
-                &steps_snapshots,
-            );
+            if run_config.snapshot_enable {
+                let snapshot_dir = &run_config.snapshot_params.snapshot_dir;
+                std::fs::create_dir_all(snapshot_dir).unwrap();
+                let file_name = format!("{snapshot_dir}/T_{t:.4}.h5");
+                match mc_curie::snapshots::save_snapshots_to_hdf5(
+                    &file_name,
+                    &equil_snapshots,
+                    &steps_snapshots,
+                ) {
+                    Ok(_) => info!("Saved snapshots to file {file_name} successfully"),
+                    Err(e) => {
+                        info!("Failed to save snapshots to file {file_name} because {e}")
+                    }
+                };
+            };
+
             stats.result()
         })
         .collect();

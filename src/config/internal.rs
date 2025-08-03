@@ -33,7 +33,7 @@ pub struct Config {
     pub num_threads: usize,
     pub kb: f64,
 
-    //output
+    // output
     pub outfile: String,
     pub energy: bool,
     pub heat_capacity: bool,
@@ -44,6 +44,12 @@ pub struct Config {
     pub group_magnetization: bool,
     pub group_susceptibility: bool,
     pub group: Vec<Vec<usize>>,
+
+    //snapshot
+    #[cfg(feature = "snapshots")]
+    pub snapshot_enable: bool,
+    #[cfg(feature = "snapshots")]
+    pub snapshot_params: crate::snapshots::ParsedSnapshots,
 }
 
 impl Config {
@@ -62,6 +68,16 @@ impl Config {
         let group_magnetization = raw_config.output.group_magnetization.unwrap_or_default();
         let group_susceptibility = raw_config.output.group_susceptibility.unwrap_or_default();
         let group = raw_config.output.group.unwrap_or_default();
+
+        #[cfg(feature = "snapshots")]
+        let (snapshots_enable, snapshots_params) = if let Some(snapshot) = raw_config.snapshots {
+            (
+                true,
+                snapshot.parse(raw_config.simulation.n_equil, raw_config.simulation.n_steps),
+            )
+        } else {
+            (false, crate::snapshots::ParsedSnapshots::default())
+        };
 
         Ok(Self {
             dim: raw_config.grid.dim,
@@ -86,6 +102,10 @@ impl Config {
             group_magnetization,
             group_susceptibility,
             group,
+            #[cfg(feature = "snapshots")]
+            snapshot_enable: snapshots_enable,
+            #[cfg(feature = "snapshots")]
+            snapshot_params: snapshots_params,
         })
     }
 
@@ -290,6 +310,13 @@ impl fmt::Display for Config {
             for (i, group) in self.group.iter().enumerate() {
                 writeln!(f, "    Group {i}: {group:?}")?;
             }
+        }
+
+        #[cfg(feature = "snapshots")]
+        if self.snapshot_enable {
+            writeln!(f, "{}", self.snapshot_params)?;
+        } else {
+            writeln!(f, "\nSnapshots: Disble")?;
         }
 
         Ok(())
