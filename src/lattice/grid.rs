@@ -4,8 +4,10 @@ use crate::spin::SpinState;
 use itertools::{iproduct, zip_eq};
 
 pub struct Grid<S: SpinState, R: rand::Rng> {
-    pub size: usize,
     pub spins: Vec<S>,
+    pub size: usize,
+    pub dim: [usize; 3],
+    pub num_sublattices: usize,
     pub calc_inputs: Vec<CalcInput<S>>,
     pub rng: R,
     pub hamiltonian: Hamiltonian,
@@ -15,7 +17,7 @@ pub struct Grid<S: SpinState, R: rand::Rng> {
 impl<S: SpinState, R: rand::Rng> Grid<S, R> {
     pub fn new(config: Config, mut rng: R) -> Self {
         let dim = config.dim;
-        let sublattices = config.sublattices;
+        let num_sublattices = config.sublattices;
         let mut spins = vec![];
         let total_sites = dim[0] * dim[1] * dim[2];
         let mut group_index = Vec::new();
@@ -29,7 +31,6 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                         [x as isize, y as isize, z as isize],
                         sub_lattice,
                         dim,
-                        sublattices,
                     ))
                 }
             }
@@ -61,13 +62,9 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             dm_enable: false,
         });
 
-        for (sublattice, x, y, z) in iproduct!(0..sublattices, 0..dim[0], 0..dim[1], 0..dim[2]) {
-            let index = coord_to_index(
-                [x as isize, y as isize, z as isize],
-                sublattice,
-                dim,
-                sublattices,
-            );
+        for (sublattice, x, y, z) in iproduct!(0..num_sublattices, 0..dim[0], 0..dim[1], 0..dim[2])
+        {
+            let index = coord_to_index([x as isize, y as isize, z as isize], sublattice, dim);
 
             let calc_input = &mut calc_inputs[index];
 
@@ -85,7 +82,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                             offset_coord,
                             exchange_param.to_sub,
                             dim,
-                            sublattices,
+                            num_sublattices,
                             config.pbc,
                         );
                         if let Some(offset_index) = offset_index_opt {
@@ -101,8 +98,10 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         }
 
         Self {
+            dim,
+            num_sublattices,
             rng,
-            size: total_sites * sublattices,
+            size: total_sites * num_sublattices,
             spins,
             calc_inputs,
             hamiltonian,
@@ -127,30 +126,36 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
     pub fn total_spin_vector(&self) -> crate::spin::SpinVector {
         self.spins.iter().map(|spin| spin.spinvector()).sum()
     }
+    pub fn get_spin_by_coord(&self, sub: usize, x: isize, y: isize, z: isize) -> Option<&S> {
+        self.spins.get(coord_to_index([x, y, z], sub, self.dim))
+    }
+
+    #[cfg(feature = "snapshots")]
+    pub fn spins_to_array(&self) -> ndarray::Array4<S> {
+        let mut result =
+            ndarray::Array4::default([self.num_sublattices, self.dim[0], self.dim[1], self.dim[2]]);
+        for (sub, x, y, z) in iproduct!(
+            0..self.num_sublattices,
+            0..self.dim[0],
+            0..self.dim[1],
+            0..self.dim[2]
+        ) {
+            if let Some(spin) = self.get_spin_by_coord(sub, x as isize, y as isize, z as isize) {
+                result[[sub, x, y, z]] = spin.clone();
+            } else {
+                unreachable!(
+                    "Internal error: invalid spin coordinate (sub={sub}, x={x}, y={y}, z={z})"
+                );
+            }
+        }
+        result
+    }
 }
 
-fn _index_to_coord(index: usize, dim: [usize; 3], sublattices: usize) -> ([isize; 3], usize) {
-    let [lx, ly, _lz] = dim;
-    let sub_lattice = index % sublattices;
-    let linear_index = index / sublattices;
-    let z = linear_index / (lx * ly);
-    let y = (linear_index / lx) % ly;
-    let x = linear_index % lx;
-
-    ([x as isize, y as isize, z as isize], sub_lattice)
-}
-
-fn coord_to_index(
-    coord: [isize; 3],
-    sublattice: usize,
-    dim: [usize; 3],
-    sublattices: usize,
-) -> usize {
+fn coord_to_index(coord: [isize; 3], sublattice: usize, dim: [usize; 3]) -> usize {
     let [x, y, z] = coord;
     let (x, y, z) = (x as usize, y as usize, z as usize);
-
-    let linear_index = x + y * dim[0] + z * dim[0] * dim[1];
-    linear_index * sublattices + sublattice
+    sublattice * (dim[0] * dim[1] * dim[2]) + x * (dim[1] * dim[2]) + y * dim[2] + z
 }
 
 fn safe_coord_to_index(
@@ -174,5 +179,5 @@ fn safe_coord_to_index(
         return None;
     }
 
-    Some(coord_to_index(coord, sublattice, dim, sublattices))
+    Some(coord_to_index(coord, sublattice, dim))
 }

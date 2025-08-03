@@ -91,15 +91,28 @@ fn run_simulation(run_config: &Config, stats_config: &StatsConfig) -> Type {
             let beta = 1. / (run_config.kb * t);
             let mut mc = Metropolis { rng, beta };
 
+            let mut equil_snapshots = vec![];
+            let mut steps_snapshots = vec![];
+
             for _ in 0..run_config.n_equil {
                 mc.step(&mut grid);
+                #[cfg(feature = "snapshots")]
+                equil_snapshots.push(grid.spins_to_array());
             }
 
             for _ in 0..run_config.n_steps {
                 mc.step(&mut grid);
                 stats.record(&grid);
+                steps_snapshots.push(grid.spins_to_array());
             }
-            info!("Simulation on temperature {t} K fininshed");
+            info!("Simulation on temperature {t:.4} K fininshed");
+
+            #[cfg(feature = "snapshots")]
+            let _ = mc_curie::snapshots::save_snapshots_to_hdf5(
+                &format!("T_{t:.4}.h5"),
+                &equil_snapshots,
+                &steps_snapshots,
+            );
             stats.result()
         })
         .collect();

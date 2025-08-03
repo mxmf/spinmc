@@ -1,9 +1,10 @@
 use crate::spin::{SpinState, SpinVector};
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
+#[repr(C)]
+#[cfg_attr(feature = "snapshots", derive(hdf5_metno::H5Type))]
 pub struct IsingSpin {
     state: f64,
-    magnitude: f64,
 }
 
 impl SpinState for IsingSpin {
@@ -11,31 +12,19 @@ impl SpinState for IsingSpin {
         SpinVector::Ising(0.)
     }
     fn new_x(magnitude: f64) -> Self {
-        Self {
-            state: magnitude,
-            magnitude,
-        }
+        Self { state: magnitude }
     }
 
     fn new_y(magnitude: f64) -> Self {
-        Self {
-            state: magnitude,
-            magnitude,
-        }
+        Self { state: magnitude }
     }
     fn new_z(magnitude: f64) -> Self {
-        Self {
-            state: magnitude,
-            magnitude,
-        }
+        Self { state: magnitude }
     }
     fn new_random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self {
         let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
         let value = sign * magnitude;
-        Self {
-            state: value,
-            magnitude,
-        }
+        Self { state: value }
     }
 
     fn magnitude(&self) -> f64 {
@@ -52,16 +41,12 @@ impl SpinState for IsingSpin {
     fn random<R: rand::Rng>(&self, rng: &mut R) -> Self {
         let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
         Self {
-            state: self.magnitude * sign,
-            magnitude: self.magnitude,
+            state: self.magnitude() * sign,
         }
     }
 
     fn propose_constrained_perturbation<R: rand::Rng>(&self, _rng: &mut R) -> Self {
-        Self {
-            state: -self.state,
-            magnitude: self.magnitude,
-        }
+        Self { state: -self.state }
     }
 
     fn dot(&self, other: &Self) -> f64 {
