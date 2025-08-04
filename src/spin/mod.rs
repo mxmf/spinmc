@@ -1,5 +1,4 @@
 pub mod heisenberg;
-
 pub mod ising;
 pub mod xy;
 
@@ -7,6 +6,7 @@ use std::ops::{Add, Div, Mul};
 use std::{iter::Sum, ops::AddAssign};
 
 use crate::calculators::{CalcInput, Hamiltonian};
+pub use heisenberg::HeisenbergSpin;
 pub use ising::IsingSpin;
 pub use xy::XYSpin;
 

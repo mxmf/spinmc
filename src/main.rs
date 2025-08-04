@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use mc_curie::spin::HeisenbergSpin;
 use mc_curie::spin::SpinState;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
@@ -89,8 +90,10 @@ fn run_parallel_simulations(run_config: &Config, stats_config: &StatsConfig) -> 
                     let mut grid = Grid::<XYSpin, _>::new(run_config.clone(), rng.clone());
                     run_single_simulate::<XYSpin, _>(&mut grid, stats, run_config, *t, rng)
                 }
-                _ => {
-                    unimplemented!("xy and Heisenberg model")
+                config::Model::Heisenberg => {
+                    let stats = Stats::new::<HeisenbergSpin>(run_config, *t, stats_config.clone());
+                    let mut grid = Grid::<HeisenbergSpin, _>::new(run_config.clone(), rng.clone());
+                    run_single_simulate::<HeisenbergSpin, _>(&mut grid, stats, run_config, *t, rng)
                 }
             }
         })
@@ -112,6 +115,10 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
     #[cfg(feature = "snapshots")]
     let (mut equil_snapshots, mut steps_snapshots) = (vec![], vec![]);
 
+    info!(
+        "Starting {} thermalization at T = {t:.4} K.",
+        run_config.n_equil
+    );
     for _step in 0..run_config.n_equil {
         mc.step(grid);
         #[cfg(feature = "snapshots")]
@@ -124,6 +131,11 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
             }
         }
     }
+
+    info!(
+        "Thermalization complete after {} steps at T = {t:.4} K. Starting {} sweeps.",
+        run_config.n_equil, run_config.n_steps
+    );
 
     for _step in 0..run_config.n_steps {
         mc.step(grid);
