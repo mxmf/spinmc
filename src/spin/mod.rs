@@ -6,9 +6,17 @@ pub mod xy;
 use std::ops::{Add, Div, Mul};
 use std::{iter::Sum, ops::AddAssign};
 
-pub use ising::IsingSpin;
-
 use crate::calculators::{CalcInput, Hamiltonian};
+pub use ising::IsingSpin;
+pub use xy::XYSpin;
+
+#[cfg(not(feature = "snapshots"))]
+trait H5Type {}
+#[cfg(not(feature = "snapshots"))]
+impl<T> H5Type for T {} // 所有类型默认实现
+
+#[cfg(feature = "snapshots")]
+use hdf5_metno::H5Type;
 
 #[derive(Clone, Debug)]
 pub enum SpinVector {
@@ -130,7 +138,7 @@ impl Sum for SpinVector {
     }
 }
 
-pub trait SpinState: Default + Clone + Send + Sync + 'static {
+pub trait SpinState: Default + Clone + Send + Sync + H5Type + 'static {
     fn new_x(magnitude: f64) -> Self;
     fn new_y(magnitude: f64) -> Self;
     fn new_z(magnitude: f64) -> Self;
@@ -144,9 +152,9 @@ pub trait SpinState: Default + Clone + Send + Sync + 'static {
 
     fn spinvector(&self) -> SpinVector;
 
-    fn random<R: rand::Rng>(&self, rng: &mut R) -> Self;
+    fn random<R: rand::Rng>(&self, rng: &mut R, magnitude: f64) -> Self;
 
-    fn propose_constrained_perturbation<R: rand::Rng>(&self, rng: &mut R) -> Self;
+    fn propose_perturbation<R: rand::Rng>(&self, rng: &mut R, magnitude: f64) -> Self;
 
     fn dot(&self, other: &Self) -> f64;
 

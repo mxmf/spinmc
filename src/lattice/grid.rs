@@ -46,12 +46,18 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                 InitialState::Z => S::new_z(*magnitude),
             };
             spins.extend(std::iter::repeat_n(new_spin, total_sites));
-            calc_inputs.extend(std::iter::repeat_n(CalcInput::default(), total_sites));
+            calc_inputs.extend(std::iter::repeat_n(
+                CalcInput {
+                    magnitude: *magnitude,
+                    ..Default::default()
+                },
+                total_sites,
+            ));
         }
 
         if let InitialState::Random = &config.initial_state {
             for spin in &mut spins {
-                *spin = spin.random(&mut rng);
+                *spin = spin.random(&mut rng, spin.magnitude());
             }
         }
 

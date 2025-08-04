@@ -38,14 +38,14 @@ impl SpinState for IsingSpin {
         SpinVector::Ising(self.state)
     }
 
-    fn random<R: rand::Rng>(&self, rng: &mut R) -> Self {
+    fn random<R: rand::Rng>(&self, rng: &mut R, _magnitude: f64) -> Self {
         let sign = if rng.random_bool(0.5) { 1.0 } else { -1.0 };
         Self {
             state: self.magnitude() * sign,
         }
     }
 
-    fn propose_constrained_perturbation<R: rand::Rng>(&self, _rng: &mut R) -> Self {
+    fn propose_perturbation<R: rand::Rng>(&self, _rng: &mut R, _magnitude: f64) -> Self {
         Self { state: -self.state }
     }
 
