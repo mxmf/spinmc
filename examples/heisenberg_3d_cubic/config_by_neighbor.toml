@@ -1,0 +1,39 @@
+[grid]
+dim = [50,50,50]
+sublattices = 1
+spin_magnitudes = [1.0]
+pbc = [true, true, true]
+
+[simulation]
+initial_state = "z"
+kb = 1
+model = "heisenberg"
+n_equil = 10000
+n_steps = 100000
+# Manually specify the list of temperatures (choose one; this takes priority)
+# temperatures = []
+
+# If `temperatures` is not provided, generate it automatically using the following range settings
+temp_start = 0.1
+temp_end = 2
+temp_step = 0.1
+num_threads = 10
+
+[output]
+outfile = "results_by_neighbor.txt"
+energy = true
+heat_capacity = true
+magnetization = true
+susceptibility = true
+magnetization_abs = true
+susceptibility_abs = true
+
+[[exchange]]
+neighbor_order=1
+strength = 1.0
+
+
+[structure]
+cell = [[1,0,0],[0,1,0],[0,0,1]]
+positions = [[0,0,0]]
+

@@ -1,0 +1,43 @@
+[grid]
+dim = [30, 30, 30]
+sublattices = 1
+spin_magnitudes = [1.0]
+pbc = [true, true, true]
+
+[simulation]
+initial_state = "z"
+kb = 1
+model = "heisenberg"
+n_equil = 10000
+n_steps = 10000
+# Manually specify the list of temperatures (choose one; this takes priority)
+# temperatures = []
+
+# If `temperatures` is not provided, generate it automatically using the following range settings
+temp_start = 1
+temp_end = 3
+temp_step = 0.05
+num_threads = 10
+
+[output]
+outfile = "result.txt"
+energy = true
+heat_capacity = true
+magnetization = true
+susceptibility = true
+magnetization_abs = true
+susceptibility_abs = true
+
+
+[snapshots]
+snapshot_equil_interval = 100
+snapshot_steps_interval = 100
+snapshot_compression = 7
+snapshot_dir = "snapshots"
+
+
+[[exchange]]
+from_sub = 0
+to_sub = 0
+offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0], [0, 0, 1], [0, 0, -1]]
+strength = 1.0
