@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
 pub struct CalcInput<S: SpinState> {
+    pub magnitude: f64,
     pub exchange_neighbors: Option<Vec<(*const S, f64)>>,
     pub dm_neighbors: Option<Vec<(usize, [f64; 3], f64)>>,
     pub magnetic_field: Option<[f64; 3]>,
@@ -12,6 +13,7 @@ pub struct CalcInput<S: SpinState> {
 impl<S: SpinState> Default for CalcInput<S> {
     fn default() -> Self {
         CalcInput {
+            magnitude: 0.0,
             exchange_neighbors: None,
             dm_neighbors: None,
             magnetic_field: None,
