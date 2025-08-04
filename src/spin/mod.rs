@@ -11,9 +11,12 @@ pub use ising::IsingSpin;
 pub use xy::XYSpin;
 
 #[cfg(not(feature = "snapshots"))]
-trait H5Type {}
+mod private {
+    pub trait H5Type {}
+    impl<T> H5Type for T {}
+}
 #[cfg(not(feature = "snapshots"))]
-impl<T> H5Type for T {} // 所有类型默认实现
+use private::H5Type;
 
 #[cfg(feature = "snapshots")]
 use hdf5_metno::H5Type;

@@ -112,27 +112,27 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
     #[cfg(feature = "snapshots")]
     let (mut equil_snapshots, mut steps_snapshots) = (vec![], vec![]);
 
-    for step in 0..run_config.n_equil {
+    for _step in 0..run_config.n_equil {
         mc.step(grid);
         #[cfg(feature = "snapshots")]
         {
             if run_config.snapshot_enable
                 && run_config.snapshot_params.snapshot_equil_interval > 0
-                && step % run_config.snapshot_params.snapshot_equil_interval == 0
+                && _step % run_config.snapshot_params.snapshot_equil_interval == 0
             {
                 equil_snapshots.push(grid.spins_to_array());
             }
         }
     }
 
-    for step in 0..run_config.n_steps {
+    for _step in 0..run_config.n_steps {
         mc.step(grid);
         stats.record(grid);
 
         #[cfg(feature = "snapshots")]
         if run_config.snapshot_enable
             && run_config.snapshot_params.snapshot_equil_interval > 0
-            && step % run_config.snapshot_params.snapshot_equil_interval == 0
+            && _step % run_config.snapshot_params.snapshot_equil_interval == 0
         {
             steps_snapshots.push(grid.spins_to_array());
         }
