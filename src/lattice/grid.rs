@@ -40,7 +40,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         let mut calc_inputs: Vec<CalcInput<S>> = vec![];
         for magnitude in &config.spin_magnitudes {
             let new_spin = match config.initial_state {
-                InitialState::Random => S::new_z(*magnitude),
+                InitialState::Random => S::new_x(*magnitude),
                 InitialState::X => S::new_x(*magnitude),
                 InitialState::Y => S::new_y(*magnitude),
                 InitialState::Z => S::new_z(*magnitude),
