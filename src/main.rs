@@ -83,17 +83,17 @@ fn run_parallel_simulations(run_config: &Config, stats_config: &StatsConfig) -> 
 
             match run_config.model {
                 config::Model::Ising => {
-                    let stats = Stats::new::<IsingSpin>(run_config, *t, stats_config.clone());
+                    let stats = Stats::<IsingSpin>::new(run_config, *t, stats_config.clone());
                     let mut grid = Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone());
                     run_single_simulate::<IsingSpin, _>(&mut grid, stats, run_config, *t, rng)
                 }
                 config::Model::Xy => {
-                    let stats = Stats::new::<XYSpin>(run_config, *t, stats_config.clone());
+                    let stats = Stats::<XYSpin>::new(run_config, *t, stats_config.clone());
                     let mut grid = Grid::<XYSpin, _>::new(run_config.clone(), rng.clone());
                     run_single_simulate::<XYSpin, _>(&mut grid, stats, run_config, *t, rng)
                 }
                 config::Model::Heisenberg => {
-                    let stats = Stats::new::<HeisenbergSpin>(run_config, *t, stats_config.clone());
+                    let stats = Stats::<HeisenbergSpin>::new(run_config, *t, stats_config.clone());
                     let mut grid = Grid::<HeisenbergSpin, _>::new(run_config.clone(), rng.clone());
                     run_single_simulate::<HeisenbergSpin, _>(&mut grid, stats, run_config, *t, rng)
                 }
@@ -106,14 +106,13 @@ fn run_parallel_simulations(run_config: &Config, stats_config: &StatsConfig) -> 
 
 fn run_single_simulate<S: SpinState, R: rand::Rng>(
     grid: &mut Grid<S, R>,
-    mut stats: Stats,
+    mut stats: Stats<S>,
     run_config: &Config,
     t: f64,
     rng: R,
 ) -> StatResult {
     let beta = 1. / (run_config.kb * t);
 
-    // let mut mc = Wolff { rng, beta };
     let mut mc = match run_config.algorithm {
         Algorithm::Wolff => AnyMC::Wolff(Wolff { rng, beta }),
         Algorithm::Metropolis => AnyMC::Metropolis(Metropolis { rng, beta }),

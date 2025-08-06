@@ -1,61 +1,61 @@
-use crate::spin::{SpinState, SpinVector};
 use rand_distr::{Distribution, UnitCircle};
+use std::{
+    iter::Sum,
+    ops::{Add, AddAssign, Div, Mul, Neg, Sub},
+};
 
-#[derive(Default, Debug, Clone)]
+use crate::spin::SpinState;
+
+#[derive(Default, Debug, Clone, Copy)]
 #[repr(C)]
 #[cfg_attr(feature = "snapshots", derive(hdf5_metno::H5Type))]
 pub struct XYSpin {
-    state: [f64; 2],
+    x: f64,
+    y: f64,
 }
 
 impl SpinState for XYSpin {
-    fn zero() -> SpinVector {
-        SpinVector::XY(0., 0.)
+    fn zero() -> Self {
+        Self { x: 0., y: 0. }
     }
-    fn new_x(magnitude: f64) -> Self {
+    fn along_x(magnitude: f64) -> Self {
         Self {
-            state: [magnitude, 0.],
+            x: magnitude,
+            y: 0.,
         }
     }
-    fn new_y(magnitude: f64) -> Self {
+
+    fn along_y(magnitude: f64) -> Self {
         Self {
-            state: [0., magnitude],
+            x: 0.,
+            y: magnitude,
         }
     }
-    fn new_z(_magnitude: f64) -> Self {
+    fn along_z(_magnitude: f64) -> Self {
         panic!("XYSpin does not support creating spins along the z-axis")
     }
-    fn new_random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self {
-        let unit: [f64; 2] = UnitCircle.sample(rng);
+    fn random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self {
+        let [x, y]: [f64; 2] = UnitCircle.sample(rng);
         Self {
-            state: [unit[0] * magnitude, unit[1] * magnitude],
+            x: x * magnitude,
+            y: y * magnitude,
         }
     }
-    fn magnitude(&self) -> f64 {
-        (self.state[0] * self.state[0] + self.state[1] * self.state[1]).sqrt()
-    }
 
-    fn direction(&self) -> SpinVector {
-        SpinVector::XY(
-            self.state[0] / self.magnitude(),
-            self.state[1] / self.magnitude(),
-        )
-    }
-
-    fn spinvector(&self) -> SpinVector {
-        SpinVector::XY(self.state[0], self.state[1])
-    }
-
-    fn random<R: rand::Rng>(&self, rng: &mut R, magnitude: f64) -> Self {
-        Self::new_random(rng, magnitude)
-    }
-
-    fn propose_perturbation<R: rand::Rng>(&self, rng: &mut R, magnitude: f64) -> Self {
-        self.random(rng, magnitude)
+    fn perturb<R: rand::Rng>(&self, rng: &mut R, magnitude: f64) -> Self {
+        Self::random(rng, magnitude)
     }
 
     fn dot(&self, other: &Self) -> f64 {
-        self.state[0] * other.state[0] + self.state[1] * other.state[1]
+        self.x * other.x + self.y * other.y
+    }
+
+    fn norm(&self) -> f64 {
+        self.norm_sqr().sqrt()
+    }
+
+    fn norm_sqr(&self) -> f64 {
+        self.x * self.x + self.y * self.y
     }
 
     fn energy_diff(
@@ -68,8 +68,92 @@ impl SpinState for XYSpin {
         self.energy(calc_input, ham, spins) - old_spin.energy(calc_input, ham, spins)
     }
 
-    fn flip(&mut self, axis: &SpinVector) {
-        let det_vec = (axis.clone() * 2. * (self.spinvector().dot(axis))).to_vec();
-        self.state = [self.state[0] - det_vec[0], self.state[1] - det_vec[1]]
+    fn is_aligned(&self, _axis: &Self) -> bool {
+        true
+    }
+
+    fn flip(&mut self, axis: &Self) {
+        let new_spin = *self - *axis * 2. * (self.dot(axis));
+        self.x = new_spin.x;
+        self.y = new_spin.y;
+    }
+}
+
+// +=
+impl AddAssign<XYSpin> for XYSpin {
+    fn add_assign(&mut self, rhs: XYSpin) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+impl AddAssign<&XYSpin> for XYSpin {
+    fn add_assign(&mut self, rhs: &XYSpin) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
+impl Sum for XYSpin {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |acc, x| acc + x)
+    }
+}
+
+impl Add for XYSpin {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+impl Neg for XYSpin {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self {
+            x: -self.x,
+            y: -self.y,
+        }
+    }
+}
+
+impl Sub for XYSpin {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+impl Mul<f64> for XYSpin {
+    type Output = Self;
+    fn mul(self, rhs: f64) -> Self {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}
+
+impl Div<f64> for XYSpin {
+    type Output = Self;
+    fn div(self, rhs: f64) -> Self::Output {
+        Self {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
+    }
+}
+
+impl Div<f64> for &XYSpin {
+    type Output = XYSpin;
+    fn div(self, rhs: f64) -> Self::Output {
+        XYSpin {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
     }
 }

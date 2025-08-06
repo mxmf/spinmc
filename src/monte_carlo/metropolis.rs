@@ -10,8 +10,7 @@ pub struct Metropolis<R: rand::Rng> {
 impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Metropolis<R> {
     fn step(&mut self, grid: &mut crate::lattice::Grid<S, R>) -> usize {
         for i in 0..grid.size {
-            let proposed_spin =
-                grid.spins[i].propose_perturbation(&mut self.rng, grid.calc_inputs[i].magnitude);
+            let proposed_spin = grid.spins[i].perturb(&mut self.rng, grid.calc_inputs[i].magnitude);
             let delta_e = proposed_spin.energy_diff(
                 &grid.calc_inputs[i],
                 &grid.hamiltonian,

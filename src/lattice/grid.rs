@@ -40,10 +40,10 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         let mut calc_inputs: Vec<CalcInput<S>> = vec![];
         for magnitude in &config.spin_magnitudes {
             let new_spin = match config.initial_state {
-                InitialState::Random => S::new_x(*magnitude),
-                InitialState::X => S::new_x(*magnitude),
-                InitialState::Y => S::new_y(*magnitude),
-                InitialState::Z => S::new_z(*magnitude),
+                InitialState::Random => S::random(&mut rng, *magnitude),
+                InitialState::X => S::along_x(*magnitude),
+                InitialState::Y => S::along_y(*magnitude),
+                InitialState::Z => S::along_z(*magnitude),
             };
             spins.extend(std::iter::repeat_n(new_spin, total_sites));
             calc_inputs.extend(std::iter::repeat_n(
@@ -53,12 +53,6 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                 },
                 total_sites,
             ));
-        }
-
-        if let InitialState::Random = &config.initial_state {
-            for spin in &mut spins {
-                *spin = spin.random(&mut rng, spin.magnitude());
-            }
         }
 
         let hamiltonian = Hamiltonian::new(HamiltonianConfig {
@@ -124,15 +118,12 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             / 2.0
     }
 
-    pub fn partial_spin_vector(&self, index: usize) -> crate::spin::SpinVector {
-        self.group_index[index]
-            .iter()
-            .map(|i| self.spins[*i].spinvector())
-            .sum()
+    pub fn partial_spin_vector(&self, index: usize) -> S {
+        self.group_index[index].iter().map(|i| self.spins[*i]).sum()
     }
 
-    pub fn total_spin_vector(&self) -> crate::spin::SpinVector {
-        self.spins.iter().map(|spin| spin.spinvector()).sum()
+    pub fn total_spin_vector(&self) -> S {
+        self.spins.iter().copied().sum()
     }
     pub fn get_spin_by_coord(&self, sub: usize, x: isize, y: isize, z: isize) -> Option<&S> {
         self.spins.get(coord_to_index([x, y, z], sub, self.dim))
@@ -149,7 +140,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             0..self.dim[2]
         ) {
             if let Some(spin) = self.get_spin_by_coord(sub, x as isize, y as isize, z as isize) {
-                result[[sub, x, y, z]] = spin.clone();
+                result[[sub, x, y, z]] = *spin;
             } else {
                 unreachable!(
                     "Internal error: invalid spin coordinate (sub={sub}, x={x}, y={y}, z={z})"
