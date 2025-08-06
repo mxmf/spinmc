@@ -143,17 +143,9 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
         run_config.n_equil, run_config.n_steps
     );
 
-    // let mut updated_spin_count = 0;
     for _step in 0..run_config.n_steps {
         mc.step(grid);
         stats.record(grid);
-        // let cluster_size = mc.step(grid);
-        // updated_spin_count += cluster_size;
-        // if updated_spin_count >= grid.size {
-        //     stats.record(grid);
-        //     updated_spin_count = 0;
-        // }
-
         #[cfg(feature = "snapshots")]
         if run_config.snapshot_enable
             && run_config.snapshot_params.snapshot_equil_interval > 0
@@ -163,6 +155,8 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
         }
     }
     info!("Simulation at temperature {t:.4} K fininshed");
+    info!(target: "result", "{}",stats.stats_config);
+    info!(target: "result", "{}",stats.result());
 
     #[cfg(feature = "snapshots")]
     if run_config.snapshot_enable {

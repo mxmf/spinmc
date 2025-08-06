@@ -1,3 +1,11 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "matplotlib",
+#     "numpy",
+#     "scipy",
+# ]
+# ///
 import matplotlib.pyplot as plt
 import argparse
 import math
