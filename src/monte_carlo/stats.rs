@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::lattice::Grid;
-use crate::spin::{SpinState, SpinVector};
+use crate::spin::SpinState;
 use std::fmt;
 
 #[derive(Clone, Debug)]
@@ -52,24 +52,24 @@ impl fmt::Display for StatsConfig {
 }
 
 #[derive(Debug)]
-pub struct Stats {
+pub struct Stats<S: SpinState> {
     pub energy_sum: f64,
     pub energy2_sum: f64,
-    pub m_sum: SpinVector, // ∑ M
-    pub m_2_sum: f64,      // ∑ M^2
-    pub m_abs_sum: f64,    // ∑ |M|
+    pub m_sum: S,       // ∑ M
+    pub m_2_sum: f64,   // ∑ M^2
+    pub m_abs_sum: f64, // ∑ |M|
     pub steps: usize,
     pub size: f64,
     pub kb: f64,
     pub t: f64,
     pub stats_config: StatsConfig,
-    pub partial_m_sum: Vec<SpinVector>,
+    pub partial_m_sum: Vec<S>,
     pub partial_m_2_sum: Vec<f64>,
     pub partial_size: Vec<f64>,
 }
 
-impl Stats {
-    pub fn new<S: SpinState>(config: &Config, t: f64, stats_config: StatsConfig) -> Self {
+impl<S: SpinState> Stats<S> {
+    pub fn new(config: &Config, t: f64, stats_config: StatsConfig) -> Self {
         let size = (config.dim[0] * config.dim[1] * config.dim[2] * config.sublattices) as f64;
         let partial_size = config
             .group
@@ -93,7 +93,7 @@ impl Stats {
         }
     }
 
-    pub fn record<S: SpinState, R: rand::Rng>(&mut self, grid: &Grid<S, R>) {
+    pub fn record<R: rand::Rng>(&mut self, grid: &Grid<S, R>) {
         if self.stats_config.energy {
             let energy = grid.total_energy();
             self.energy_sum += energy;
@@ -115,7 +115,7 @@ impl Stats {
             }
 
             if self.stats_config.magnetization_abs || self.stats_config.susceptibility_abs {
-                self.m_abs_sum += spin_vec.norm();
+                self.m_abs_sum += &spin_vec.norm();
             }
             if self.stats_config.susceptibility || self.stats_config.susceptibility_abs {
                 self.m_2_sum += spin_vec.norm_sqr();
@@ -124,8 +124,8 @@ impl Stats {
 
         if self.stats_config.group_magnetization || self.stats_config.group_susceptibility {
             for i in 0..self.stats_config.group_num {
-                let partial_spin_vec = grid.partial_spin_vector(i);
-                self.partial_m_sum[i] += &partial_spin_vec;
+                let partial_spin_vec = &grid.partial_spin_vector(i);
+                self.partial_m_sum[i] += partial_spin_vec;
                 if self.stats_config.group_susceptibility {
                     self.partial_m_2_sum[i] += partial_spin_vec.norm_sqr();
                 }
@@ -151,13 +151,13 @@ impl Stats {
         };
 
         let magnetization = if self.stats_config.magnetization {
-            Some((&self.m_sum / self.steps as f64).norm() / self.size)
+            Some((self.m_sum / self.steps as f64).norm() / self.size)
         } else {
             None
         };
 
         let susceptibility = if self.stats_config.susceptibility {
-            let m_avg = &self.m_sum / self.steps as f64; //<M>
+            let m_avg = self.m_sum / self.steps as f64; //<M>
             // let m_avg = self.m_norm_sum / self.steps as f64; // < |M| >
             let m2_avg = self.m_2_sum / self.steps as f64; // < |M|^2>
             Some((m2_avg - m_avg.norm_sqr()) / (self.kb * self.t) / self.size)
@@ -184,7 +184,7 @@ impl Stats {
                 self.partial_m_sum
                     .iter()
                     .zip(self.partial_size.iter())
-                    .map(|(m_sum, size)| (m_sum / self.steps as f64).norm() / size)
+                    .map(|(m_sum, size)| (*m_sum / self.steps as f64).norm() / size)
                     .collect(),
             )
         } else {
@@ -198,7 +198,7 @@ impl Stats {
                     .zip(self.partial_m_2_sum.iter())
                     .zip(self.partial_size.iter())
                     .map(|((m_sum, m_2_sum), size)| {
-                        ((m_2_sum / self.steps as f64) - (m_sum / self.steps as f64).norm_sqr())
+                        ((m_2_sum / self.steps as f64) - (*m_sum / self.steps as f64).norm_sqr())
                             / (self.kb * self.t)
                             / size
                     })

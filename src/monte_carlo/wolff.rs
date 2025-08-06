@@ -1,4 +1,4 @@
-use crate::spin::{SpinState, SpinVector};
+use crate::spin::SpinState;
 use std::collections::VecDeque;
 
 use super::MonteCarlo;
@@ -9,12 +9,9 @@ pub struct Wolff<R: rand::Rng> {
 impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
     fn step(&mut self, grid: &mut crate::lattice::Grid<S, R>) -> usize {
         let init_spin_index = self.rng.random_range(0..grid.size);
-        let axis = match grid.spins[init_spin_index].spinvector() {
-            SpinVector::Ising(_) => grid.spins[init_spin_index].direction(),
-            _ => grid.spins[init_spin_index]
-                .spinvector()
-                .random(&mut self.rng),
-        };
+
+        let axis = -grid.spins[init_spin_index].perturb(&mut self.rng, 1.0);
+
         let mut visited = vec![false; grid.size];
         let mut cluster = Vec::new();
         let mut queue = VecDeque::new();
@@ -34,18 +31,16 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
 
                 let neighbor_spin = &grid.spins[*neighbor];
 
-                if let SpinVector::Ising(_) = grid.spins[init_spin_index].spinvector() {
-                    if neighbor_spin.dot(&grid.spins[site]) < 0. {
-                        continue;
-                    }
-                };
+                if !neighbor_spin.is_aligned(&axis) {
+                    continue;
+                }
 
                 let p = 1.0
                     - (-2.0
                         * self.beta
                         * j
-                        * (grid.spins[site].spinvector().dot(&axis))
-                        * (neighbor_spin.spinvector().dot(&axis)))
+                        * (grid.spins[site].dot(&axis) / grid.spins[site].norm())
+                        * (neighbor_spin.dot(&axis) / grid.spins[site].norm()))
                     .exp();
 
                 if self.rng.random::<f64>() < p {
