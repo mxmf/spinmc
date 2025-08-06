@@ -1,5 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
+use mc_curie::config::Algorithm;
+use mc_curie::monte_carlo::AnyMC;
 use mc_curie::spin::HeisenbergSpin;
 use mc_curie::spin::SpinState;
 use rand_core::SeedableRng;
@@ -14,7 +16,7 @@ use tracing_subscriber::FmtSubscriber;
 use mc_curie::{
     config::{self, Config},
     lattice::Grid,
-    monte_carlo::{Metropolis, MonteCarlo, StatResult, Stats, StatsConfig},
+    monte_carlo::{Metropolis, MonteCarlo, StatResult, Stats, StatsConfig, Wolff},
     spin::{IsingSpin, XYSpin},
 };
 
@@ -110,7 +112,12 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
     rng: R,
 ) -> StatResult {
     let beta = 1. / (run_config.kb * t);
-    let mut mc = Metropolis { rng, beta };
+
+    // let mut mc = Wolff { rng, beta };
+    let mut mc = match run_config.algorithm {
+        Algorithm::Wolff => AnyMC::Wolff(Wolff { rng, beta }),
+        Algorithm::Metropolis => AnyMC::Metropolis(Metropolis { rng, beta }),
+    };
 
     #[cfg(feature = "snapshots")]
     let (mut equil_snapshots, mut steps_snapshots) = (vec![], vec![]);
@@ -137,9 +144,16 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
         run_config.n_equil, run_config.n_steps
     );
 
+    // let mut updated_spin_count = 0;
     for _step in 0..run_config.n_steps {
         mc.step(grid);
         stats.record(grid);
+        // let cluster_size = mc.step(grid);
+        // updated_spin_count += cluster_size;
+        // if updated_spin_count >= grid.size {
+        //     stats.record(grid);
+        //     updated_spin_count = 0;
+        // }
 
         #[cfg(feature = "snapshots")]
         if run_config.snapshot_enable

@@ -1,4 +1,6 @@
 pub mod heisenberg;
+use rand_distr::{Distribution, UnitCircle, UnitSphere};
+use std::ops::Neg;
 pub mod ising;
 pub mod xy;
 
@@ -49,6 +51,14 @@ impl AddAssign<&SpinVector> for SpinVector {
 }
 
 impl SpinVector {
+    pub fn to_vec(&self) -> Vec<f64> {
+        match self {
+            SpinVector::Ising(s) => vec![*s],
+            SpinVector::XY(x, y) => vec![*x, *y],
+            SpinVector::Heisenberg(x, y, z) => vec![*x, *y, *z],
+        }
+    }
+
     pub fn zero(kind: &SpinVector) -> Self {
         match kind {
             SpinVector::Ising(_) => SpinVector::Ising(0.0),
@@ -71,6 +81,32 @@ impl SpinVector {
             SpinVector::Heisenberg(x, y, z) => x.powi(2) + y.powi(2) + z.powi(2),
         }
     }
+    pub fn dot(&self, other: &SpinVector) -> f64 {
+        match (self, other) {
+            (SpinVector::Ising(a), SpinVector::Ising(b)) => a * b,
+            (SpinVector::XY(ax, ay), SpinVector::XY(bx, by)) => ax * bx + ay * by,
+            (SpinVector::Heisenberg(ax, ay, az), SpinVector::Heisenberg(bx, by, bz)) => {
+                ax * bx + ay * by + az * bz
+            }
+            _ => panic!("Cannot compute dot product of different spin types"),
+        }
+    }
+
+    pub fn random<R: rand::Rng>(&self, rng: &mut R) -> Self {
+        match self {
+            SpinVector::Ising(_) => {
+                SpinVector::Ising(if rng.random_bool(0.5) { 1.0 } else { -1.0 })
+            }
+            SpinVector::XY(_, _) => {
+                let [x, y] = UnitCircle.sample(rng);
+                SpinVector::XY(x, y)
+            }
+            SpinVector::Heisenberg(_, _, _) => {
+                let [x, y, z] = UnitSphere.sample(rng);
+                SpinVector::Heisenberg(x, y, z)
+            }
+        }
+    }
 }
 
 impl Add for SpinVector {
@@ -83,6 +119,18 @@ impl Add for SpinVector {
                 SpinVector::Heisenberg(ax + bx, ay + by, az + bz)
             }
             _ => panic!("Cannot add different spin types"),
+        }
+    }
+}
+
+impl Neg for SpinVector {
+    type Output = SpinVector;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            SpinVector::Ising(s) => SpinVector::Ising(-s),
+            SpinVector::XY(x, y) => SpinVector::XY(-x, -y),
+            SpinVector::Heisenberg(x, y, z) => SpinVector::Heisenberg(-x, -y, -z),
         }
     }
 }
@@ -173,4 +221,7 @@ pub trait SpinState: Default + Clone + Send + Sync + H5Type + 'static {
     ) -> f64 {
         ham.compute(self, calc_input, spins) - ham.compute(old_spin, calc_input, spins)
     }
+
+    // for wolff
+    fn flip(&mut self, axis: &SpinVector);
 }

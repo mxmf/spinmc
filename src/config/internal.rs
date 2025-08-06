@@ -1,3 +1,4 @@
+use super::raw_config::Algorithm;
 use super::raw_config::Model;
 use crate::lattice::Atoms;
 use std::fmt;
@@ -32,6 +33,7 @@ pub struct Config {
     pub temperatures: Vec<f64>,
     pub num_threads: usize,
     pub kb: f64,
+    pub algorithm: Algorithm,
 
     // output
     pub outfile: String,
@@ -79,6 +81,8 @@ impl Config {
             (false, crate::snapshots::ParsedSnapshots::default())
         };
 
+        let algorithm = raw_config.simulation.algorithm.unwrap_or(Algorithm::Wolff);
+
         Ok(Self {
             dim: raw_config.grid.dim,
             sublattices: raw_config.grid.sublattices,
@@ -91,6 +95,7 @@ impl Config {
             n_steps: raw_config.simulation.n_steps,
             temperatures,
             num_threads: raw_config.simulation.num_threads,
+            algorithm,
             kb,
             outfile: raw_config.output.outfile,
             energy,
@@ -262,6 +267,7 @@ impl fmt::Display for Config {
         writeln!(f, "  Equilibration Steps: {}", self.n_equil)?;
         writeln!(f, "  Simulation Steps: {}", self.n_steps)?;
         writeln!(f, "  Boltzmann Constant (kB): {} (eV/K)", self.kb)?;
+        writeln!(f, "  Algorithm: {:?}", self.algorithm)?;
         writeln!(f, "  Threads: {}", self.num_threads)?;
 
         write!(f, "Temperatures (K):\n  ")?;

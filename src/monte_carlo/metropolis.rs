@@ -8,7 +8,7 @@ pub struct Metropolis<R: rand::Rng> {
 }
 
 impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Metropolis<R> {
-    fn step(&mut self, grid: &mut crate::lattice::Grid<S, R>) {
+    fn step(&mut self, grid: &mut crate::lattice::Grid<S, R>) -> usize {
         for i in 0..grid.size {
             let proposed_spin =
                 grid.spins[i].propose_perturbation(&mut self.rng, grid.calc_inputs[i].magnitude);
@@ -23,5 +23,6 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Metropolis<R> {
                 *spin = proposed_spin;
             }
         }
+        grid.size
     }
 }
