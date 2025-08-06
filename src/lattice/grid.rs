@@ -94,6 +94,8 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                         if let Some(offset_index) = offset_index_opt {
                             exchange_neighbors
                                 .push((&spins[offset_index] as *const S, exchange_param.strength));
+                            calc_input.exchange_neighbor_index.push(offset_index);
+                            calc_input.exchanges.push(exchange_param.strength);
                         }
                     }
                 }

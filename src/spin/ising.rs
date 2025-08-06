@@ -62,4 +62,8 @@ impl SpinState for IsingSpin {
     ) -> f64 {
         2. * self.energy(calc_input, ham, spins)
     }
+
+    fn flip(&mut self, _axis: &SpinVector) {
+        self.state = -self.state
+    }
 }

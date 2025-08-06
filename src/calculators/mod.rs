@@ -5,6 +5,8 @@ use std::collections::HashSet;
 pub struct CalcInput<S: SpinState> {
     pub magnitude: f64,
     pub exchange_neighbors: Option<Vec<(*const S, f64)>>,
+    pub exchanges: Vec<f64>,
+    pub exchange_neighbor_index: Vec<usize>,
     pub dm_neighbors: Option<Vec<(usize, [f64; 3], f64)>>,
     pub magnetic_field: Option<[f64; 3]>,
     pub easy_axis: Option<[f64; 3]>,
@@ -14,6 +16,8 @@ impl<S: SpinState> Default for CalcInput<S> {
     fn default() -> Self {
         CalcInput {
             magnitude: 0.0,
+            exchange_neighbor_index: vec![],
+            exchanges: vec![],
             exchange_neighbors: None,
             dm_neighbors: None,
             magnetic_field: None,
@@ -23,7 +27,7 @@ impl<S: SpinState> Default for CalcInput<S> {
 }
 
 impl<S: SpinState> CalcInput<S> {
-    pub fn validate_exchange_neighbor(&self) -> bool {
+    pub fn validate_exchange_neighbor(&self) {
         let pairs = &self.exchange_neighbors;
         if let Some(vec) = pairs {
             let mut seen = HashSet::new();
@@ -34,8 +38,12 @@ impl<S: SpinState> CalcInput<S> {
                     );
                 }
             }
+
+            if vec.len() != self.exchange_neighbor_index.len() || vec.len() != self.exchanges.len()
+            {
+                panic!()
+            }
         }
-        true
     }
 }
 

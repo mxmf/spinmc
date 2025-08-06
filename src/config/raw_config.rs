@@ -59,6 +59,13 @@ pub enum Model {
     Heisenberg,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum Algorithm {
+    Metropolis,
+    Wolff,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Simulation {
     pub initial_state: InitialState,
@@ -70,7 +77,7 @@ pub struct Simulation {
     pub temp_end: Option<f64>,
     pub temp_step: Option<f64>,
     pub num_threads: usize,
-
+    pub algorithm: Option<Algorithm>,
     // default kb = 8.617333262145×10^−5 eV/K
     pub kb: Option<f64>,
 }

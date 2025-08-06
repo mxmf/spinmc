@@ -77,4 +77,12 @@ impl SpinState for HeisenbergSpin {
     ) -> f64 {
         self.energy(calc_input, ham, spins) - old_spin.energy(calc_input, ham, spins)
     }
+    fn flip(&mut self, axis: &SpinVector) {
+        let det_vec = (axis.clone() * 2. * (self.spinvector().dot(&axis))).to_vec();
+        self.state = [
+            self.state[0] - det_vec[0],
+            self.state[1] - det_vec[1],
+            self.state[2] - det_vec[2],
+        ]
+    }
 }
