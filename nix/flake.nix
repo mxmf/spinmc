@@ -47,9 +47,11 @@
             cargo-show-asm
 
             hdf5
+            cmake
             pkg-config
 
 
+            uv
             python3
             python3Packages.matplotlib
             python3Packages.scipy
