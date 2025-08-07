@@ -68,6 +68,18 @@ pub trait SpinState:
     ) -> f64 {
         self.local_energy(calc_input, ham, spins) - old_spin.local_energy(calc_input, ham, spins)
     }
+    fn ion_anisotropy_energy(&self, calc_input: &CalcInput<Self>, ham: &Hamiltonian) -> f64 {
+        ham.compute_anisotropy(self, calc_input)
+    }
+
+    fn ion_anisotropy_energy_diff(
+        &self,
+        calc_input: &CalcInput<Self>,
+        ham: &Hamiltonian,
+        old_spin: &Self,
+    ) -> f64 {
+        ham.compute_anisotropy(self, calc_input) - ham.compute_anisotropy(old_spin, calc_input)
+    }
 
     fn is_aligned(&self, axis: &Self) -> bool;
 
@@ -83,7 +95,7 @@ pub trait SpinState:
         1.0 - (-2.0 * beta * j * (self.dot(axis)) * (other.dot(axis))).exp()
     }
 
-    fn flip(&mut self, axis: &Self);
+    fn flip(&mut self, axis: &Self) -> Self;
 
     fn to_array(&self) -> [f64; 3];
 }

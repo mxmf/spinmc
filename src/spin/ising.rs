@@ -77,8 +77,8 @@ impl SpinState for IsingSpin {
         1.0 - (-2.0 * beta * j * self_magnitude * other_magnitude).exp()
     }
 
-    fn flip(&mut self, _axis: &Self) {
-        self.state = -self.state
+    fn flip(&mut self, _axis: &Self) -> Self {
+        Self { state: -self.state }
     }
 
     fn to_array(&self) -> [f64; 3] {

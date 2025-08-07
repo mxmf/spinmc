@@ -62,10 +62,8 @@ impl SpinState for XYSpin {
         true
     }
 
-    fn flip(&mut self, axis: &Self) {
-        let new_spin = *self - *axis * 2. * (self.dot(axis));
-        self.x = new_spin.x;
-        self.y = new_spin.y;
+    fn flip(&mut self, axis: &Self) -> Self {
+        *self - *axis * 2. * (self.dot(axis))
     }
 
     fn to_array(&self) -> [f64; 3] {

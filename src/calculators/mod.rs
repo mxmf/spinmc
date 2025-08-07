@@ -172,4 +172,8 @@ impl Hamiltonian {
         }
         result
     }
+
+    pub fn compute_anisotropy<S: SpinState>(&self, spin: &S, calc_input: &CalcInput<S>) -> f64 {
+        anisotropy_energy(spin, calc_input)
+    }
 }
