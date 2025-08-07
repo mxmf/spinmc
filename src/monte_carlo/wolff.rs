@@ -51,15 +51,34 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
             }
         }
 
-        // let e_0 = grid.total_energy();
+        if self.ham_config.anisotropy_enable {
+            let mut delta_e = 0.;
+            for index in &cluster {
+                let flip_spin = grid.spins[*index].flip(&axis);
+
+                delta_e += flip_spin.ion_anisotropy_energy_diff(
+                    &grid.calc_inputs[*index],
+                    &grid.hamiltonian,
+                    &grid.spins[*index],
+                )
+            }
+
+            if delta_e >= 0.0 && self.rng.random::<f64>() > (-self.beta * delta_e).exp() {
+                return 0;
+            }
+        }
 
         for index in &cluster {
-            grid.spins[*index].flip(&axis);
+            grid.spins[*index] = grid.spins[*index].flip(&axis);
         }
 
-        if self.ham_config.anisotropy_enable {
-            unimplemented!("unimplemented wolff with ion anisotropy");
-        }
+        // if self.ham_config.anisotropy_enable {
+        //     if delta_e >= 0.0 && self.rng.random::<f64>() > (-self.beta * delta_e).exp() {
+        //         for index in &cluster {
+        //             grid.spins[*index] = grid.spins[*index].flip(&axis);
+        //         }
+        //     }
+        // }
 
         cluster.len()
     }
