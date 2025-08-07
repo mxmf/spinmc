@@ -114,7 +114,11 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
     let beta = 1. / (run_config.kb * t);
 
     let mut mc = match run_config.algorithm {
-        Algorithm::Wolff => AnyMC::Wolff(Wolff { rng, beta }),
+        Algorithm::Wolff => AnyMC::Wolff(Wolff {
+            rng,
+            beta,
+            ham_config: grid.hamiltonian.config,
+        }),
         Algorithm::Metropolis => AnyMC::Metropolis(Metropolis { rng, beta }),
     };
 

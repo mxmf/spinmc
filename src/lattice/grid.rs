@@ -118,7 +118,6 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         zip_eq(self.spins.iter(), self.calc_inputs.iter())
             .map(|(spin, calc_input)| spin.energy(calc_input, &self.hamiltonian, &self.spins))
             .sum::<f64>()
-            / 2.0
     }
 
     pub fn partial_spin_vector(&self, index: usize) -> S {

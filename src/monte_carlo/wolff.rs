@@ -1,10 +1,11 @@
-use crate::spin::SpinState;
+use crate::{calculators::HamiltonianConfig, spin::SpinState};
 use std::collections::VecDeque;
 
 use super::MonteCarlo;
 pub struct Wolff<R: rand::Rng> {
     pub rng: R,
     pub beta: f64,
+    pub ham_config: HamiltonianConfig,
 }
 impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
     fn step(&mut self, grid: &mut crate::lattice::Grid<S, R>) -> usize {
@@ -35,14 +36,14 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
                     continue;
                 }
 
-                let p = 1.0
-                    - (-2.0
-                        * self.beta
-                        * j
-                        * ((grid.spins[site] / grid.calc_inputs[site].magnitude).dot(&axis))
-                        * ((*neighbor_spin / grid.calc_inputs[*neighbor].magnitude).dot(&axis)))
-                    .exp();
-
+                let p = grid.spins[site].wolff_probability(
+                    neighbor_spin,
+                    &axis,
+                    self.beta,
+                    *j,
+                    grid.calc_inputs[site].magnitude,
+                    grid.calc_inputs[*neighbor].magnitude,
+                );
                 if self.rng.random::<f64>() < p {
                     visited[*neighbor] = true;
                     queue.push_back(*neighbor);
@@ -50,8 +51,14 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
             }
         }
 
+        // let e_0 = grid.total_energy();
+
         for index in &cluster {
             grid.spins[*index].flip(&axis);
+        }
+
+        if self.ham_config.anisotropy_enable {
+            unimplemented!("unimplemented wolff with ion anisotropy");
         }
 
         cluster.len()
