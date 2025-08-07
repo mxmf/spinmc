@@ -51,6 +51,10 @@ pub trait SpinState:
     fn norm(&self) -> f64;
     fn norm_sqr(&self) -> f64;
 
+    fn local_energy(&self, calc_input: &CalcInput<Self>, ham: &Hamiltonian, spins: &[Self]) -> f64 {
+        ham.local_compute(self, calc_input, spins)
+    }
+
     fn energy(&self, calc_input: &CalcInput<Self>, ham: &Hamiltonian, spins: &[Self]) -> f64 {
         ham.compute(self, calc_input, spins)
     }
@@ -62,10 +66,22 @@ pub trait SpinState:
         spins: &[Self],
         old_spin: &Self,
     ) -> f64 {
-        ham.compute(self, calc_input, spins) - ham.compute(old_spin, calc_input, spins)
+        self.local_energy(calc_input, ham, spins) - old_spin.local_energy(calc_input, ham, spins)
     }
 
     fn is_aligned(&self, axis: &Self) -> bool;
+
+    fn wolff_probability(
+        &self,
+        other: &Self,
+        axis: &Self,
+        beta: f64,
+        j: f64,
+        _self_magnitude: f64,
+        _other_magnitude: f64,
+    ) -> f64 {
+        1.0 - (-2.0 * beta * j * (self.dot(axis)) * (other.dot(axis))).exp()
+    }
 
     fn flip(&mut self, axis: &Self);
 

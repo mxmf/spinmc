@@ -58,11 +58,23 @@ impl SpinState for IsingSpin {
         spins: &[Self],
         _old_spin: &Self,
     ) -> f64 {
-        2. * self.energy(calc_input, ham, spins)
+        2. * self.local_energy(calc_input, ham, spins)
     }
 
     fn is_aligned(&self, axis: &Self) -> bool {
         self.state.signum() == axis.state.signum()
+    }
+
+    fn wolff_probability(
+        &self,
+        _other: &Self,
+        _axis: &Self,
+        beta: f64,
+        j: f64,
+        self_magnitude: f64,
+        other_magnitude: f64,
+    ) -> f64 {
+        1.0 - (-2.0 * beta * j * self_magnitude * other_magnitude).exp()
     }
 
     fn flip(&mut self, _axis: &Self) {

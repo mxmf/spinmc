@@ -49,7 +49,30 @@ impl<S: SpinState> CalcInput<S> {
     }
 }
 
+/// Compute total exchange energy, with 1/2 factor to avoid double counting.
+/// Should only be used in total energy evaluation.
 fn exchange_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
+    if let Some(list) = calc_input.exchange_neighbors.as_ref() {
+        let energy: f64 = list
+            .iter()
+            .map(|(n, j)| {
+                unsafe {
+                    let neighbor = &*(*n); // *n 是 *const S，解引用为 &S
+                    -j * spin.dot(neighbor)
+                }
+            })
+            .sum();
+        energy / 2.
+        // Each exchange interaction between sites i and j is counted twice
+        // (once from i → j and once from j → i), so we divide by 2 to avoid double-counting.
+    } else {
+        0.0
+    }
+}
+
+/// Compute local exchange energy for one site. No 1/2 factor.
+/// Used in energy_diff or local site updates.
+fn local_exchange_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
     if let Some(list) = calc_input.exchange_neighbors.as_ref() {
         list.iter()
             .map(|(n, j)| {
@@ -74,6 +97,7 @@ fn anisotropy_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
     let spin_array = spin.to_array();
 
     let dot = spin_array[0] * axis[0] + spin_array[1] * axis[1] + spin_array[2] * axis[2];
+
     strength * dot * dot
 }
 
@@ -91,7 +115,7 @@ pub struct HamiltonianConfig {
 
 #[derive(Clone, Debug)]
 pub struct Hamiltonian {
-    config: HamiltonianConfig,
+    pub config: HamiltonianConfig,
 }
 impl Hamiltonian {
     pub fn new(config: &Config) -> Self {
@@ -111,6 +135,29 @@ impl Hamiltonian {
         let mut result = 0.0;
         if self.config.exchange_enable {
             result += exchange_energy(spin, calc_input);
+        }
+
+        if self.config.zeeman_enable {
+            result += zeeman_energy(spin, calc_input);
+        }
+
+        if self.config.anisotropy_enable {
+            result += anisotropy_energy(spin, calc_input);
+        }
+        if self.config.dm_enable {
+            result += dm_energy(spin, calc_input, spins)
+        }
+        result
+    }
+    pub fn local_compute<S: SpinState>(
+        &self,
+        spin: &S,
+        calc_input: &CalcInput<S>,
+        spins: &[S],
+    ) -> f64 {
+        let mut result = 0.0;
+        if self.config.exchange_enable {
+            result += local_exchange_energy(spin, calc_input);
         }
 
         if self.config.zeeman_enable {
