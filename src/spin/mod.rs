@@ -68,4 +68,6 @@ pub trait SpinState:
     fn is_aligned(&self, axis: &Self) -> bool;
 
     fn flip(&mut self, axis: &Self);
+
+    fn to_array(&self) -> [f64; 3];
 }

@@ -69,13 +69,8 @@ impl SpinState for IsingSpin {
         self.state = -self.state
     }
 
-    fn energy(
-        &self,
-        calc_input: &crate::calculators::CalcInput<Self>,
-        ham: &crate::calculators::Hamiltonian,
-        spins: &[Self],
-    ) -> f64 {
-        ham.compute(self, calc_input, spins)
+    fn to_array(&self) -> [f64; 3] {
+        [0., 0., self.state]
     }
 }
 

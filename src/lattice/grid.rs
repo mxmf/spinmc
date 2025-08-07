@@ -1,7 +1,8 @@
-use crate::calculators::{CalcInput, Hamiltonian, HamiltonianConfig};
+use crate::calculators::{CalcInput, Hamiltonian};
 use crate::config::{Config, InitialState};
 use crate::spin::SpinState;
 use itertools::{iproduct, zip_eq};
+use tracing::debug;
 
 pub struct Grid<S: SpinState, R: rand::Rng> {
     pub spins: Vec<S>,
@@ -22,14 +23,14 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         let total_sites = dim[0] * dim[1] * dim[2];
         let mut group_index = Vec::new();
 
-        for sub_lattice_group in config.group {
+        for sub_lattice_group in &config.group {
             let mut indexs = Vec::new();
 
             for sub_lattice in sub_lattice_group {
                 for (x, y, z) in iproduct!(0..dim[0], 0..dim[1], 0..dim[2]) {
                     indexs.push(coord_to_index(
                         [x as isize, y as isize, z as isize],
-                        sub_lattice,
+                        *sub_lattice,
                         dim,
                     ))
                 }
@@ -55,12 +56,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             ));
         }
 
-        let hamiltonian = Hamiltonian::new(HamiltonianConfig {
-            exchange_enable: true,
-            anisotropy_enable: false,
-            zeeman_enable: false,
-            dm_enable: false,
-        });
+        let hamiltonian = Hamiltonian::new(&config);
 
         for (sublattice, x, y, z) in iproduct!(0..num_sublattices, 0..dim[0], 0..dim[1], 0..dim[2])
         {
@@ -95,6 +91,13 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                 }
             }
 
+            if !&config.anisotropy_params.is_empty() {
+                calc_input.anisotropy = (
+                    config.anisotropy_params[sublattice].strength,
+                    config.anisotropy_params[sublattice].saxis,
+                );
+                debug!("{:?}", calc_input.anisotropy);
+            }
             calc_input.exchange_neighbors = Some(exchange_neighbors);
             calc_input.validate_exchange_neighbor();
         }

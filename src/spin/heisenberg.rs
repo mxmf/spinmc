@@ -70,16 +70,6 @@ impl SpinState for HeisenbergSpin {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    fn energy_diff(
-        &self,
-        calc_input: &crate::calculators::CalcInput<HeisenbergSpin>,
-        ham: &crate::calculators::Hamiltonian,
-        spins: &[Self],
-        old_spin: &Self,
-    ) -> f64 {
-        self.energy(calc_input, ham, spins) - old_spin.energy(calc_input, ham, spins)
-    }
-
     fn is_aligned(&self, _axis: &Self) -> bool {
         true
     }
@@ -89,6 +79,10 @@ impl SpinState for HeisenbergSpin {
         self.x = new_spin.x;
         self.y = new_spin.y;
         self.z = new_spin.z;
+    }
+
+    fn to_array(&self) -> [f64; 3] {
+        [self.x, self.y, self.z]
     }
 }
 

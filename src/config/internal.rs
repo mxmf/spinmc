@@ -13,6 +13,11 @@ pub struct ExchangeParams {
     pub offsets: Vec<[isize; 3]>,
     pub strength: f64,
 }
+#[derive(Debug, Clone)]
+pub struct AnisotropyParams {
+    pub saxis: [f64; 3],
+    pub strength: f64,
+}
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -24,6 +29,7 @@ pub struct Config {
 
     //rules
     pub exchange_params: Vec<ExchangeParams>,
+    pub anisotropy_params: Vec<AnisotropyParams>,
 
     // simulation
     pub initial_state: InitialState,
@@ -59,6 +65,7 @@ impl Config {
         let raw_config = RawConfig::load_from_file(path)?;
         let temperatures = Self::resolve_temperatures(&raw_config)?;
         let exchange_params = Self::resolve_exchange(&raw_config)?;
+        let anisotropy_params = Self::resolve_anisotropy(&raw_config)?;
         let kb = raw_config.simulation.kb.unwrap_or(0.00008617333262145178);
 
         let energy = raw_config.output.energy.unwrap_or_default();
@@ -89,6 +96,7 @@ impl Config {
             spin_magnitudes: raw_config.grid.spin_magnitudes,
             pbc: raw_config.grid.pbc,
             exchange_params,
+            anisotropy_params,
             initial_state: raw_config.simulation.initial_state,
             model: raw_config.simulation.model,
             n_equil: raw_config.simulation.n_equil,
@@ -225,6 +233,31 @@ impl Config {
             }
         }
         Ok(exchange_params)
+    }
+
+    fn resolve_anisotropy(raw_config: &RawConfig) -> anyhow::Result<Vec<AnisotropyParams>> {
+        let mut result = vec![];
+
+        if let Some(anisotropy) = &raw_config.anisotropy {
+            for (saxis, strength) in anisotropy.saxis.iter().zip(anisotropy.strength.iter()) {
+                let saxis_norm =
+                    (saxis[0] * saxis[0] + saxis[1] * saxis[1] + saxis[2] * saxis[2]).sqrt();
+                if saxis_norm == 0.0 {
+                    anyhow::bail!("Anisotropy direction vector {:?} has zero length", saxis);
+                }
+
+                let ani = AnisotropyParams {
+                    saxis: [
+                        saxis[0] / saxis_norm,
+                        saxis[1] / saxis_norm,
+                        saxis[2] / saxis_norm,
+                    ],
+                    strength: *strength,
+                };
+                result.push(ani);
+            }
+        }
+        Ok(result)
     }
 }
 

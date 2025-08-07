@@ -36,10 +36,10 @@ pub struct Zeeman {
     pub strength: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Anisotropy {
     pub saxis: Vec<[f64; 3]>,
-    pub strength: f64,
+    pub strength: Vec<f64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -132,6 +132,7 @@ impl RawConfig {
     pub fn validate(&mut self) -> anyhow::Result<()> {
         self.validate_grid()?;
         self.validate_output()?;
+        self.validate_anistropy()?;
         Ok(())
     }
 
@@ -192,6 +193,26 @@ impl RawConfig {
             }
         };
 
+        Ok(())
+    }
+
+    fn validate_anistropy(&self) -> anyhow::Result<()> {
+        if let Some(anisotropy) = &self.anisotropy {
+            if anisotropy.saxis.len() != anisotropy.strength.len() {
+                panic!(
+                    "anisotropy saxis length ({}) does not match anisotropy strength length ({})",
+                    anisotropy.saxis.len(),
+                    anisotropy.strength.len(),
+                );
+            }
+            if anisotropy.strength.len() != self.grid.sublattices {
+                panic!(
+                    "anisotropy strength length ({}) does not match sublattices ({})",
+                    anisotropy.strength.len(),
+                    self.grid.sublattices
+                );
+            }
+        }
         Ok(())
     }
 }
