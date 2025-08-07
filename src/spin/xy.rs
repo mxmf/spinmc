@@ -58,16 +58,6 @@ impl SpinState for XYSpin {
         self.x * self.x + self.y * self.y
     }
 
-    fn energy_diff(
-        &self,
-        calc_input: &crate::calculators::CalcInput<XYSpin>,
-        ham: &crate::calculators::Hamiltonian,
-        spins: &[Self],
-        old_spin: &Self,
-    ) -> f64 {
-        self.energy(calc_input, ham, spins) - old_spin.energy(calc_input, ham, spins)
-    }
-
     fn is_aligned(&self, _axis: &Self) -> bool {
         true
     }
@@ -76,6 +66,10 @@ impl SpinState for XYSpin {
         let new_spin = *self - *axis * 2. * (self.dot(axis));
         self.x = new_spin.x;
         self.y = new_spin.y;
+    }
+
+    fn to_array(&self) -> [f64; 3] {
+        [self.x, self.y, 0.]
     }
 }
 

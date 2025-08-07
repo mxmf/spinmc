@@ -1,4 +1,4 @@
-use crate::spin::SpinState;
+use crate::{config::Config, spin::SpinState};
 use std::collections::HashSet;
 
 #[derive(Clone, Debug)]
@@ -10,6 +10,7 @@ pub struct CalcInput<S: SpinState> {
     pub dm_neighbors: Option<Vec<(usize, [f64; 3], f64)>>,
     pub magnetic_field: Option<[f64; 3]>,
     pub easy_axis: Option<[f64; 3]>,
+    pub anisotropy: (f64, [f64; 3]),
 }
 
 impl<S: SpinState> Default for CalcInput<S> {
@@ -22,6 +23,7 @@ impl<S: SpinState> Default for CalcInput<S> {
             dm_neighbors: None,
             magnetic_field: None,
             easy_axis: None,
+            anisotropy: (0., [0., 0., 1.]),
         }
     }
 }
@@ -66,8 +68,13 @@ fn zeeman_energy<S: SpinState>(_: &S, _: &CalcInput<S>) -> f64 {
     unimplemented!();
 }
 
-fn anisotropy_energy<S: SpinState>(_: &S, _: &CalcInput<S>) -> f64 {
-    unimplemented!();
+fn anisotropy_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
+    let (strength, axis) = calc_input.anisotropy;
+
+    let spin_array = spin.to_array();
+
+    let dot = spin_array[0] * axis[0] + spin_array[1] * axis[1] + spin_array[2] * axis[2];
+    strength * dot * dot
 }
 
 fn dm_energy<S: SpinState>(_: &S, _: &CalcInput<S>, _: &[S]) -> f64 {
@@ -87,8 +94,17 @@ pub struct Hamiltonian {
     config: HamiltonianConfig,
 }
 impl Hamiltonian {
-    pub fn new(config: HamiltonianConfig) -> Self {
-        Self { config }
+    pub fn new(config: &Config) -> Self {
+        let exchange_enable = !config.exchange_params.is_empty();
+        let anisotropy_enable = !config.anisotropy_params.is_empty();
+
+        let ham_config = HamiltonianConfig {
+            exchange_enable,
+            anisotropy_enable,
+            zeeman_enable: false,
+            dm_enable: false,
+        };
+        Self { config: ham_config }
     }
 
     pub fn compute<S: SpinState>(&self, spin: &S, calc_input: &CalcInput<S>, spins: &[S]) -> f64 {

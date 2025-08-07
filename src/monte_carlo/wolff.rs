@@ -31,7 +31,7 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
 
                 let neighbor_spin = &grid.spins[*neighbor];
 
-                if !neighbor_spin.is_aligned(&axis) {
+                if !neighbor_spin.is_aligned(&grid.spins[site]) {
                     continue;
                 }
 
@@ -39,8 +39,8 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
                     - (-2.0
                         * self.beta
                         * j
-                        * (grid.spins[site].dot(&axis) / grid.spins[site].norm())
-                        * (neighbor_spin.dot(&axis) / grid.spins[site].norm()))
+                        * ((grid.spins[site] / grid.calc_inputs[site].magnitude).dot(&axis))
+                        * ((*neighbor_spin / grid.calc_inputs[*neighbor].magnitude).dot(&axis)))
                     .exp();
 
                 if self.rng.random::<f64>() < p {
