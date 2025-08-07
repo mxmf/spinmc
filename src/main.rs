@@ -54,7 +54,7 @@ fn main() -> Result<()> {
 
     let file = File::create(&run_config.outfile)?;
 
-    let mut writer = BufWriter::new(file);
+    let mut writer = BufWriter::new(&file);
 
     writeln!(writer, "{stats_config}",)?;
 
@@ -62,6 +62,10 @@ fn main() -> Result<()> {
         writeln!(writer, "{result}",)?;
     }
 
+    info!(
+        "Simulation completed. Results saved to file: {}",
+        run_config.outfile
+    );
     Ok(())
 }
 
