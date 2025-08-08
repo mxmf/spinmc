@@ -166,13 +166,15 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
         run_config.n_equil, run_config.n_steps
     );
 
-    for _step in 0..run_config.n_steps {
+    for step in 0..run_config.n_steps {
         mc.step(grid);
-        stats.record(grid);
+        if step % run_config.stats_interval == 0 {
+            stats.record(grid);
+        }
         #[cfg(feature = "snapshots")]
         if run_config.snapshot_enable
             && run_config.snapshot_params.snapshot_equil_interval > 0
-            && _step % run_config.snapshot_params.snapshot_equil_interval == 0
+            && step % run_config.snapshot_params.snapshot_equil_interval == 0
         {
             steps_snapshots.push(grid.spins_to_array());
         }

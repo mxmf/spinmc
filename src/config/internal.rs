@@ -52,6 +52,7 @@ pub struct Config {
     pub group_magnetization: bool,
     pub group_susceptibility: bool,
     pub group: Vec<Vec<usize>>,
+    pub stats_interval: usize,
 
     //snapshot
     #[cfg(feature = "snapshots")]
@@ -77,6 +78,7 @@ impl Config {
         let group_magnetization = raw_config.output.group_magnetization.unwrap_or_default();
         let group_susceptibility = raw_config.output.group_susceptibility.unwrap_or_default();
         let group = raw_config.output.group.unwrap_or_default();
+        let stats_interval = raw_config.output.stats_interval.unwrap_or(2);
 
         #[cfg(feature = "snapshots")]
         let (snapshots_enable, snapshots_params) = if let Some(snapshot) = raw_config.snapshots {
@@ -115,6 +117,7 @@ impl Config {
             group_magnetization,
             group_susceptibility,
             group,
+            stats_interval,
             #[cfg(feature = "snapshots")]
             snapshot_enable: snapshots_enable,
             #[cfg(feature = "snapshots")]
@@ -262,6 +265,9 @@ impl fmt::Display for Config {
         if !self.exchange_params.is_empty() {
             hamiltonian += "-∑⟨i,j⟩ Jᵢⱼ Sᵢ · Sⱼ";
         }
+        if !self.anisotropy_params.is_empty() {
+            hamiltonian += "- ∑<i>AᵢSᵢ²"
+        }
         // TODO more hamiltonian term
 
         writeln!(f, "\n=== Simulation Configuration ===")?;
@@ -274,7 +280,7 @@ impl fmt::Display for Config {
         writeln!(f, "\nExchange Parameters:")?;
         writeln!(
             f,
-            "{:<4} | {:<3} | {:>3} {:>3} {:>3}  | {:>12}",
+            "  {:<4} | {:<3} | {:>3} {:>3} {:>3}  | {:>12}",
             "from", "to", "x", "y", "z", "strength (eV)"
         )?;
         for params in &self.exchange_params {
@@ -283,7 +289,7 @@ impl fmt::Display for Config {
             for offset in &params.offsets {
                 writeln!(
                     f,
-                    "{from_sub:<4} | {to_sub:<3} | {:>3} {:>3} {:>3}  | {strength:>8.12}",
+                    "  {from_sub:<4} | {to_sub:<3} | {:>3} {:>3} {:>3}  | {strength:>8.12}",
                     offset[0], offset[1], offset[2]
                 )?;
             }
@@ -293,14 +299,14 @@ impl fmt::Display for Config {
             writeln!(f, "\nAnisotropy Parameters:")?;
             writeln!(
                 f,
-                "{:<6} | {:>10}     | {:>12}",
-                "ion", "saxis", "strength (eV)"
+                "  {:<6} | {:>10}     | {:>12}",
+                " ion ", "saxis", "strength (eV)"
             )?;
             for (i, ani) in self.anisotropy_params.iter().enumerate() {
                 let [x, y, z] = ani.saxis;
                 writeln!(
                     f,
-                    "ion{i:<4}| {x:>4} {y:>4} {z:>4} | {:>8.12}",
+                    "  ion{i:<4}| {x:>4} {y:>4} {z:>4} | {:>8.12}",
                     ani.strength
                 )?;
             }
@@ -324,6 +330,7 @@ impl fmt::Display for Config {
 
         writeln!(f, "\nOutput:")?;
         writeln!(f, "  Output File: {}", self.outfile)?;
+        writeln!(f, "  stats_interval: {}", self.stats_interval)?;
 
         writeln!(
             f,

@@ -102,6 +102,7 @@ pub struct Output {
     pub group_magnetization: Option<bool>,
     pub group_susceptibility: Option<bool>,
     pub group: Option<Vec<Vec<usize>>>,
+    pub stats_interval: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
