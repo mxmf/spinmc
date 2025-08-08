@@ -127,9 +127,9 @@ impl Config {
         if sim.temperatures.is_some()
             && (sim.temp_start.is_some() || sim.temp_end.is_some() || sim.temp_step.is_some())
         {
-            return Err(anyhow::anyhow!(
+            anyhow::bail!(
                 "Cannot specify both `temperatures` and `temp_start`/`temp_end`/`temp_step` — please choose one."
-            ));
+            );
         }
 
         if let Some(temperatures) = &sim.temperatures {
@@ -146,12 +146,12 @@ impl Config {
                 }
                 Ok(vec)
             }
-            (None, None, None) => Err(anyhow::anyhow!(
+            (None, None, None) => anyhow::bail!(
                 "You must provide either `temperatures` or all of `temp_start`, `temp_end`, `temp_step`."
-            )),
-            _ => Err(anyhow::anyhow!(
+            ),
+            _ => anyhow::bail!(
                 "`temp_start`, `temp_end`, and `temp_step` must all be specified together."
-            )),
+            ),
         }
     }
 
@@ -169,21 +169,18 @@ impl Config {
                 );
 
                 match (from_sub, to_sub, offsets, neighbor_order, structure) {
-                    (_, _, Some(_), Some(_), _) => {
-                        panic!(
-                            "Invalid configuration: do not set both `offsets` and `neighbor_order`; only one should be specified."
-                        )
-                    }
-                    (_, _, None, None, _) => {
-                        panic!(
-                            "Missing configuration: you must specify either `offsets` or `neighbor_order`."
-                        )
-                    }
-                    (_, _, _, Some(_), None) => {
-                        panic!(
-                            "Incomplete configuration: when using `neighbor_order`, `structure` must be set."
-                        )
-                    }
+                    (_, _, Some(_), Some(_), _) => anyhow::bail!(
+                        "Invalid configuration: do not set both `offsets` and `neighbor_order`; only one should be specified.",
+                    ),
+
+                    (_, _, None, None, _) => anyhow::bail!(
+                        "Missing configuration: you must specify either `offsets` or `neighbor_order`.",
+                    ),
+
+                    (_, _, _, Some(_), None) => anyhow::bail!(
+                        "Incomplete configuration: when using `neighbor_order`, `structure` must be set.",
+                    ),
+
                     (from_sub, to_sub, Some(offsets), None, _) => {
                         if let (Some(from_sub), Some(to_sub)) = (from_sub, to_sub) {
                             exchange_params.push(ExchangeParams {
@@ -193,7 +190,7 @@ impl Config {
                                 strength: *strength,
                             });
                         } else {
-                            panic!(
+                            anyhow::bail!(
                                 "Incomplete configuration: when using `offsets`, both `from_sub` and `to_sub` must be specified."
                             )
                         }
@@ -213,11 +210,9 @@ impl Config {
                             }
                             (Some(from), None) => atoms.find_neighbors_from(*from, *neighbor_order),
                             (None, None) => atoms.find_neighbors_all(*neighbor_order),
-                            (None, Some(_)) => {
-                                panic!(
-                                    "Invalid configuration: `from_sub` must be specified when using `neighbor_order`."
-                                );
-                            }
+                            (None, Some(_)) => anyhow::bail!(
+                                "Invalid configuration: `from_sub` must be specified when using `neighbor_order`."
+                            ),
                         };
 
                         for neighbor in neighbors {

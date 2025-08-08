@@ -23,27 +23,27 @@ impl SpinState for HeisenbergSpin {
             z: 0.,
         }
     }
-    fn along_x(magnitude: f64) -> Self {
-        Self {
+    fn along_x(magnitude: f64) -> anyhow::Result<Self> {
+        Ok(Self {
             x: magnitude,
             y: 0.,
             z: 0.,
-        }
+        })
     }
 
-    fn along_y(magnitude: f64) -> Self {
-        Self {
+    fn along_y(magnitude: f64) -> anyhow::Result<Self> {
+        Ok(Self {
             x: 0.,
             y: magnitude,
             z: 0.,
-        }
+        })
     }
-    fn along_z(magnitude: f64) -> Self {
-        Self {
+    fn along_z(magnitude: f64) -> anyhow::Result<Self> {
+        Ok(Self {
             x: 0.,
             y: 0.,
             z: magnitude,
-        }
+        })
     }
     fn random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self {
         let [x, y, z]: [f64; 3] = UnitSphere.sample(rng);

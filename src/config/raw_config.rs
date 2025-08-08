@@ -158,7 +158,7 @@ impl RawConfig {
                 susceptibility_abs: None,
                 ..
             } => {
-                panic!("No output fields specified: Please enable at least one observable.")
+                anyhow::bail!("No output fields specified: Please enable at least one observable.");
             }
 
             Output {
@@ -170,7 +170,7 @@ impl RawConfig {
                 susceptibility_abs: Some(false),
                 ..
             } => {
-                panic!("No output fields specified: Please enable at least one observable.")
+                anyhow::bail!("No output fields specified: Please enable at least one observable.");
             }
 
             _ => {}
@@ -180,14 +180,14 @@ impl RawConfig {
             || self.output.group_susceptibility == Some(true))
             && self.output.group.is_none()
         {
-            panic!("you must specific group");
+            anyhow::bail!("group_magnetization/group_susceptibility set but group is None");
         }
 
         if let Some(group) = &self.output.group {
             for i in group {
                 for j in i {
                     if *j >= self.grid.sublattices {
-                        panic!("group_magnetization member{j} not in sublattices, check it")
+                        anyhow::bail!("group_magnetization member{j} not in sublattices, check it");
                     }
                 }
             }
@@ -199,14 +199,14 @@ impl RawConfig {
     fn validate_anistropy(&self) -> anyhow::Result<()> {
         if let Some(anisotropy) = &self.anisotropy {
             if anisotropy.saxis.len() != anisotropy.strength.len() {
-                panic!(
+                anyhow::bail!(
                     "anisotropy saxis length ({}) does not match anisotropy strength length ({})",
                     anisotropy.saxis.len(),
                     anisotropy.strength.len(),
                 );
             }
             if anisotropy.strength.len() != self.grid.sublattices {
-                panic!(
+                anyhow::bail!(
                     "anisotropy strength length ({}) does not match sublattices ({})",
                     anisotropy.strength.len(),
                     self.grid.sublattices

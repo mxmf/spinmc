@@ -18,21 +18,21 @@ impl SpinState for XYSpin {
     fn zero() -> Self {
         Self { x: 0., y: 0. }
     }
-    fn along_x(magnitude: f64) -> Self {
-        Self {
+    fn along_x(magnitude: f64) -> anyhow::Result<Self> {
+        Ok(Self {
             x: magnitude,
             y: 0.,
-        }
+        })
     }
 
-    fn along_y(magnitude: f64) -> Self {
-        Self {
+    fn along_y(magnitude: f64) -> anyhow::Result<Self> {
+        Ok(Self {
             x: 0.,
             y: magnitude,
-        }
+        })
     }
-    fn along_z(_magnitude: f64) -> Self {
-        panic!("XYSpin does not support creating spins along the z-axis")
+    fn along_z(_magnitude: f64) -> anyhow::Result<Self> {
+        anyhow::bail!("XYSpin does not support creating spins along the z-axis");
     }
     fn random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self {
         let [x, y]: [f64; 2] = UnitCircle.sample(rng);

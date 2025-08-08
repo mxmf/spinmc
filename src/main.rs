@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use colored::*;
 use mc_curie::config::Algorithm;
 use mc_curie::monte_carlo::AnyMC;
 use mc_curie::spin::HeisenbergSpin;
@@ -29,6 +30,14 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    if let Err(e) = run() {
+        eprintln!("{}", format!("Error: {e}").red().bold());
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+fn run() -> anyhow::Result<()> {
     let args = Args::parse();
     let run_config = Config::new(&args.config)?;
 
@@ -69,16 +78,17 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-type Type = anyhow::Result<Vec<StatResult>>;
-
-fn run_parallel_simulations(run_config: &Config, stats_config: &StatsConfig) -> Type {
+fn run_parallel_simulations(
+    run_config: &Config,
+    stats_config: &StatsConfig,
+) -> anyhow::Result<Vec<StatResult>> {
     ThreadPoolBuilder::new()
         .num_threads(run_config.num_threads)
         .build_global()
         .unwrap();
 
     info!("Start run simulations");
-    let results: Vec<StatResult> = run_config
+    let results: anyhow::Result<Vec<StatResult>> = run_config
         .temperatures
         .par_iter()
         .map(|t| {
@@ -88,24 +98,30 @@ fn run_parallel_simulations(run_config: &Config, stats_config: &StatsConfig) -> 
             match run_config.model {
                 config::Model::Ising => {
                     let stats = Stats::<IsingSpin>::new(run_config, *t, stats_config.clone());
-                    let mut grid = Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone());
-                    run_single_simulate::<IsingSpin, _>(&mut grid, stats, run_config, *t, rng)
+                    let mut grid = Grid::<IsingSpin, _>::new(run_config.clone(), rng.clone())?;
+                    Ok(run_single_simulate::<IsingSpin, _>(
+                        &mut grid, stats, run_config, *t, rng,
+                    ))
                 }
                 config::Model::Xy => {
                     let stats = Stats::<XYSpin>::new(run_config, *t, stats_config.clone());
-                    let mut grid = Grid::<XYSpin, _>::new(run_config.clone(), rng.clone());
-                    run_single_simulate::<XYSpin, _>(&mut grid, stats, run_config, *t, rng)
+                    let mut grid = Grid::<XYSpin, _>::new(run_config.clone(), rng.clone())?;
+                    Ok(run_single_simulate::<XYSpin, _>(
+                        &mut grid, stats, run_config, *t, rng,
+                    ))
                 }
                 config::Model::Heisenberg => {
                     let stats = Stats::<HeisenbergSpin>::new(run_config, *t, stats_config.clone());
-                    let mut grid = Grid::<HeisenbergSpin, _>::new(run_config.clone(), rng.clone());
-                    run_single_simulate::<HeisenbergSpin, _>(&mut grid, stats, run_config, *t, rng)
+                    let mut grid = Grid::<HeisenbergSpin, _>::new(run_config.clone(), rng.clone())?;
+                    Ok(run_single_simulate::<HeisenbergSpin, _>(
+                        &mut grid, stats, run_config, *t, rng,
+                    ))
                 }
             }
         })
         .collect();
 
-    Ok(results)
+    results
 }
 
 fn run_single_simulate<S: SpinState, R: rand::Rng>(

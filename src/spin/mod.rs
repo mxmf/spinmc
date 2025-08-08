@@ -40,9 +40,9 @@ pub trait SpinState:
     + Sum
 {
     fn zero() -> Self;
-    fn along_x(magnitude: f64) -> Self;
-    fn along_y(magnitude: f64) -> Self;
-    fn along_z(magnitude: f64) -> Self;
+    fn along_x(magnitude: f64) -> anyhow::Result<Self>;
+    fn along_y(magnitude: f64) -> anyhow::Result<Self>;
+    fn along_z(magnitude: f64) -> anyhow::Result<Self>;
     fn random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self;
 
     fn perturb<R: rand::Rng>(&self, rng: &mut R, magnitude: f64) -> Self;

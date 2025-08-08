@@ -29,13 +29,13 @@ impl<S: SpinState> Default for CalcInput<S> {
 }
 
 impl<S: SpinState> CalcInput<S> {
-    pub fn validate_exchange_neighbor(&self) {
+    pub fn validate_exchange_neighbor(&self) -> anyhow::Result<()> {
         let pairs = &self.exchange_neighbors;
         if let Some(vec) = pairs {
             let mut seen = HashSet::new();
             for (index, _) in vec {
                 if !seen.insert(index) {
-                    panic!(
+                    anyhow::bail!(
                         "Duplicate neighbor indices found in your exchange coupling configuration. Please ensure all neighbor indices are unique."
                     );
                 }
@@ -43,9 +43,15 @@ impl<S: SpinState> CalcInput<S> {
 
             if vec.len() != self.exchange_neighbor_index.len() || vec.len() != self.exchanges.len()
             {
-                panic!()
+                anyhow::bail!(
+                    "unexpected exchange data length: exchange_ptr={}, exchange_neighbors={}, exchanges={}",
+                    vec.len(),
+                    self.exchange_neighbor_index.len(),
+                    self.exchanges.len()
+                );
             }
         }
+        Ok(())
     }
 }
 
