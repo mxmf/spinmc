@@ -1,10 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use colored::*;
-use mc_curie::config::Algorithm;
-use mc_curie::monte_carlo::AnyMC;
-use mc_curie::spin::HeisenbergSpin;
-use mc_curie::spin::SpinState;
 use mimalloc::MiMalloc;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
@@ -15,11 +11,11 @@ use std::io::{BufWriter, Write};
 use tracing::info;
 use tracing_subscriber::FmtSubscriber;
 
-use mc_curie::{
-    config::{self, Config},
+use spinmc::{
+    config::{self, Algorithm, Config},
     lattice::Grid,
-    monte_carlo::{Metropolis, MonteCarlo, StatResult, Stats, StatsConfig, Wolff},
-    spin::{IsingSpin, XYSpin},
+    monte_carlo::{AnyMC, Metropolis, MonteCarlo, StatResult, Stats, StatsConfig, Wolff},
+    spin::{HeisenbergSpin, IsingSpin, SpinState, XYSpin},
 };
 
 #[derive(Parser, Debug)]
@@ -190,7 +186,7 @@ fn run_single_simulate<S: SpinState, R: rand::Rng>(
         let snapshot_dir = &run_config.snapshot_params.snapshot_dir;
         std::fs::create_dir_all(snapshot_dir).unwrap();
         let file_name = format!("{snapshot_dir}/T_{t:.4}.h5");
-        match mc_curie::snapshots::save_snapshots_to_hdf5(
+        match spinmc::snapshots::save_snapshots_to_hdf5(
             &file_name,
             &equil_snapshots,
             &steps_snapshots,
