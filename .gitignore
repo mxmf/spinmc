@@ -27,3 +27,5 @@ target
 .direnv
 **/result*.txt
 **/*.h5
+
+justfile
