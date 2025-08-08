@@ -5,6 +5,7 @@ use mc_curie::config::Algorithm;
 use mc_curie::monte_carlo::AnyMC;
 use mc_curie::spin::HeisenbergSpin;
 use mc_curie::spin::SpinState;
+use mimalloc::MiMalloc;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
 use rayon::ThreadPoolBuilder;
@@ -29,6 +30,8 @@ struct Args {
     config: String,
 }
 
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 fn main() -> Result<()> {
     if let Err(e) = run() {
         eprintln!("{}", format!("Error: {e}").red().bold());
