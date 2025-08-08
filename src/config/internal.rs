@@ -289,6 +289,24 @@ impl fmt::Display for Config {
             }
         }
 
+        if !&self.anisotropy_params.is_empty() {
+            writeln!(f, "\nAnisotropy Parameters:")?;
+            writeln!(
+                f,
+                "{:<6} | {:>10}     | {:>12}",
+                "ion", "saxis", "strength (eV)"
+            )?;
+            for (i, ani) in self.anisotropy_params.iter().enumerate() {
+                let [x, y, z] = ani.saxis;
+                writeln!(
+                    f,
+                    "ion{i:<4}| {x:>4} {y:>4} {z:>4} | {:>8.12}",
+                    ani.strength
+                )?;
+            }
+        }
+        // for ions in
+
         writeln!(f, "\nSimulation Parameters:")?;
         writeln!(f, "  Initial State: {:?}", self.initial_state)?;
         writeln!(f, "  Model: {:?}", self.model)?;
