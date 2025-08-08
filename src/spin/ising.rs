@@ -16,15 +16,15 @@ impl SpinState for IsingSpin {
     fn zero() -> Self {
         Self { state: 0. }
     }
-    fn along_x(_magnitude: f64) -> Self {
-        panic!("IsingSpin does not support creating spins along the x-axis")
+    fn along_x(_magnitude: f64) -> anyhow::Result<Self> {
+        anyhow::bail!("IsingSpin does not support creating spins along the x-axis")
     }
 
-    fn along_y(_magnitude: f64) -> Self {
-        panic!("IsingSpin does not support creating spins along the y-axis")
+    fn along_y(_magnitude: f64) -> anyhow::Result<Self> {
+        anyhow::bail!("IsingSpin does not support creating spins along the y-axis")
     }
-    fn along_z(magnitude: f64) -> Self {
-        Self { state: magnitude }
+    fn along_z(magnitude: f64) -> anyhow::Result<Self> {
+        Ok(Self { state: magnitude })
     }
     fn random<R: rand::Rng>(rng: &mut R, magnitude: f64) -> Self {
         let value = if rng.random_bool(0.5) {

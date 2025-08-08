@@ -16,7 +16,7 @@ pub struct Grid<S: SpinState, R: rand::Rng> {
 }
 
 impl<S: SpinState, R: rand::Rng> Grid<S, R> {
-    pub fn new(config: Config, mut rng: R) -> Self {
+    pub fn new(config: Config, mut rng: R) -> anyhow::Result<Self> {
         let dim = config.dim;
         let num_sublattices = config.sublattices;
         let mut spins = vec![];
@@ -42,9 +42,9 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         for magnitude in &config.spin_magnitudes {
             let new_spin = match config.initial_state {
                 InitialState::Random => S::random(&mut rng, *magnitude),
-                InitialState::X => S::along_x(*magnitude),
-                InitialState::Y => S::along_y(*magnitude),
-                InitialState::Z => S::along_z(*magnitude),
+                InitialState::X => S::along_x(*magnitude)?,
+                InitialState::Y => S::along_y(*magnitude)?,
+                InitialState::Z => S::along_z(*magnitude)?,
             };
             spins.extend(std::iter::repeat_n(new_spin, total_sites));
             calc_inputs.extend(std::iter::repeat_n(
@@ -99,10 +99,10 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                 debug!("{:?}", calc_input.anisotropy);
             }
             calc_input.exchange_neighbors = Some(exchange_neighbors);
-            calc_input.validate_exchange_neighbor();
+            calc_input.validate_exchange_neighbor()?;
         }
 
-        Self {
+        Ok(Self {
             dim,
             num_sublattices,
             rng,
@@ -111,7 +111,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             calc_inputs,
             hamiltonian,
             group_index,
-        }
+        })
     }
 
     pub fn total_energy(&self) -> f64 {
