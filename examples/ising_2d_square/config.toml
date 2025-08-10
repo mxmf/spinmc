@@ -1,23 +1,24 @@
 [grid]
-dim = [50, 50, 1]
+dimensions = [50, 50, 1]
 sublattices = 1
 spin_magnitudes = [1.0]
-pbc = [true, true, false]
+periodic_boundary = [true, true, false]
 
 [simulation]
-initial_state = "z"
-kb = 1
+initial_state = "random"
+boltzmann_constant = 1
 model = "ising"
-n_equil = 10000
-n_steps = 100000
+equilibration_steps = 10000
+measurement_steps = 100000
+algorithm = "wolff"
+num_threads = 10
 # Manually specify the list of temperatures (choose one; this takes priority)
 # temperatures = []
+[simulation.temperature_range]
+start = 1
+end = 3
+step = 0.1
 
-# If `temperatures` is not provided, generate it automatically using the following range settings
-temp_start = 1
-temp_end = 3
-temp_step = 0.1
-num_threads = 10
 
 [output]
 outfile = "result.txt"
@@ -29,7 +30,7 @@ magnetization_abs = true
 susceptibility_abs = true
 
 [[exchange]]
-from_sub = 0
-to_sub = 0
+from_sublattice = 0
+to_sublattice= 0
 offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]]
 strength = 1.0

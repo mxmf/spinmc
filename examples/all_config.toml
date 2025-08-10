@@ -1,0 +1,115 @@
+# Monte Carlo Simulation Configuration File
+# All energy-related quantities are in eV; temperature is in K
+
+# =======================
+# System lattice/grid definition
+# =======================
+[grid]
+dimensions = [50, 50, 1]                # System size in [x, y, z] dimensions (unit cells)
+sublattices = 1                         # Number of sublattices in the unit cell
+spin_magnitudes = [1.0]                 # Magnitude of spins for each sublattice (μB units)
+periodic_boundary = [true, true, false] # Periodic boundary conditions [x, y, z]
+
+# =======================
+# Simulation control parameters
+# =======================
+[simulation]
+initial_state = "random"    # Initial spin configuration ("random"/"x"/"y"/"z")
+boltzmann_constant = 1      # kB in eV/K (default 8.617333262145×10⁻⁵ eV/K)
+model = "ising"             # Spin model ("ising"/"xy"/"heisenberg")
+equilibration_steps = 10000 # Number of MC steps for equilibration
+measurement_steps = 100000  # Number of MC steps for measurements
+algorithm = "wolff"         # MC algorithm ("metropolis"/"wolff")
+num_threads = 10            # Number of parallel threads for simulation
+
+# Temperature specification
+# Option 1: Explicit temperature list (K units)
+temperatures = []
+# Option 2: Temperature range with linear spacing
+[simulation.temperature_range]
+start = 1    # Starting temperature (K)
+end = 3      # Ending temperature (K)
+step = 0.1   # Temperature increment (K)
+
+# =======================
+# Output configuration
+# =======================
+[output]
+outfile = "result.txt" # Main output file path 
+stats_interval = 1     # Interval for recording measurement step
+
+# =======================
+# Thermodynamic quantities
+# =======================
+energy = true        # ⟨E⟩/N : Average energy per spin (eV units)
+heat_capacity = true # (⟨E²⟩ - ⟨E⟩²) / (N kB T²) : Heat capacity per spin (eV/K units)
+
+# Magnetic properties (per sublattice)
+magnetization = true       # M = ⟨Σ s_i⟩ / N : Net magnetization per spin (μB units)
+susceptibility = true      # χ = (⟨M²⟩ - ⟨M⟩²) / (N kB T) : Magnetic susceptibility per spin (μB² / eV units)
+
+# Absolute value variants 
+magnetization_abs = true   # M = ⟨|Σ s_i|⟩ / N : Absolute magnetization per spin (μB units)
+susceptibility_abs = true  # χ(|M|) = (⟨|M|²⟩ - ⟨|M|⟩²) / (N kB T) : Susceptibility from absolute M (μB² / eV units)
+
+# Group-specific outputs
+group = []                   # Spin group definitions (indices are sublattice IDs;  e.g., [[0,1,2],[3,4,5]])
+group_magnetization = true   # ⟨Σ s_g⟩ / N_g : Per-group magnetization (μB units)
+group_susceptibility = true  # (⟨M_g²⟩ - ⟨M_g⟩²) / (N_g kB T) : Per-group susceptibility (μB² / eV units)
+
+# =======================
+# System snapshots
+# =======================
+[snapshots]
+equilibration_interval = 1000 # Interval for saving equilibration snapshots
+measurement_interval = 1000   # Interval for saving measurement snapshots
+compression_level = 8         # ZIP compression level (0-9)
+save_directory = "snapshots"  # Snapshot save directory
+
+# =======================
+# Crystalline structure
+# =======================
+[structure]
+cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]] # Unit cell vectors (Å)
+positions = [[0, 0, 0]]                  # Atomic positions (fractional coordinates)
+tolerance = 0.0001                       # Distance comparison tolerance (Å)
+
+# =======================
+# Exchange interaction definitions
+# =======================
+
+# --- Scheme 1: Explicit from_sublattice / to_sublattice + offsets ---
+# Use when you want to manually list all interacting spin pairs.
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]] # Relative position vectors
+strength = 1.0                                           # Exchange coupling constant J (eV)
+
+
+# --- Scheme 2: Target sublattice + neighbor order ---
+# Use when you know the target sublattice and want to auto-generate interaction pairs 
+# based on coordination shell (neighbor order).
+[[exchange]]
+to_sublattice = 0
+neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
+strength = 1.0      # Exchange coupling constant J (eV) 
+
+[[exchange]]
+to_sublattice = 1
+neighbor_order = 0  # Coordination shell (1=nearest, 2=next-nearest etc.)
+strength = 1.0      # Exchange coupling constant J (eV) 
+
+# --- Scheme 3: Minimal definition ---
+# Only specify neighbor order and strength; automatically applies to all sublattice pairs.
+[[exchange]]
+neighbor_order = 1
+strength = 1.0      # Exchange coupling constant J (eV)
+
+# =======================
+# Magnetic anisotropy configuration
+# =======================
+[anisotropy]
+axis = [[0, 0, 1]] # Anisotropy direction vector (normalized internally)
+strength = [0]   # Anisotropy constant D (eV units)
+

@@ -6,10 +6,10 @@ periodic_boundary = [true, true, false]
 
 [simulation]
 initial_state = "random"
-model = "ising"
+model = "heisenberg"
 equilibration_steps = 100000
-measurement_steps = 100000
-algorithm = "wolff"
+measurement_steps = 200000
+algorithm = "metropolis"
 num_threads = 10
 
 # Manually specify the list of temperatures (choose one; this takes priority)
@@ -41,11 +41,16 @@ save_directory = "snapshots"
 from_sublattice = 0
 to_sublattice = 1
 offsets = [[0, 0, 0], [1, 0, 0], [0, 1, 0]]
-strength = 0.0013548
+strength = 0.002944
 
 
 [[exchange]]
 from_sublattice = 1
 to_sublattice = 0
 offsets = [[0, 0, 0], [-1, 0, 0], [0, -1, 0]]
-strength = 0.0013548
+strength = 0.002944
+
+
+[anisotropy]
+axis = [[0, 0, 1],[0,0,1]]
+strength = [0.000744, 0.000744]
