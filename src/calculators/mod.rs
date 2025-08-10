@@ -104,7 +104,7 @@ fn anisotropy_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
 
     let dot = spin_array[0] * axis[0] + spin_array[1] * axis[1] + spin_array[2] * axis[2];
 
-    strength * dot * dot
+    -strength * dot * dot
 }
 
 fn dm_energy<S: SpinState>(_: &S, _: &CalcInput<S>, _: &[S]) -> f64 {
