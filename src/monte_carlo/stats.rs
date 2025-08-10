@@ -18,33 +18,33 @@ pub struct StatsConfig {
 
 impl fmt::Display for StatsConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "# T (K)")?;
+        write!(f, "{:<12}", "# T (K)")?;
         if self.energy {
-            write!(f, "\tEnergy (eV)")?;
+            write!(f, "\t{:<12}", "Energy (eV)")?;
         }
         if self.heat_capacity {
-            write!(f, "\t$C$ (eV/K)")?;
+            write!(f, "\t{:<12}", "$C$ (eV/K)")?;
         }
         if self.magnetization {
-            write!(f, "\tM ($\\mu_B$)")?;
+            write!(f, "\t{:<12}", "M ($\\mu_B$)")?;
         }
         if self.susceptibility {
-            write!(f, "\t$\\chi$ ")?;
+            write!(f, "\t{:<12}", "$\\chi$ ($\\mu_B^2/eV$)")?;
         }
         if self.magnetization_abs {
-            write!(f, "\t|M| ($\\mu_B$)")?;
+            write!(f, "\t{:<12}", "|M| ($\\mu_B$)")?;
         }
         if self.susceptibility_abs {
-            write!(f, "\t$|\\chi|$ ")?;
+            write!(f, "\t{:<12}", "$|\\chi|$ ($\\mu_B^2/eV$)")?;
         }
         if self.group_magnetization {
             for i in 0..self.group_num {
-                write!(f, "\tM$_{i}$ ($\\mu_B$)")?;
+                write!(f, "\t{:<12}", format!("M$_{i}$ ($\\mu_B$)"))?;
             }
         }
         if self.group_susceptibility {
             for i in 0..self.group_num {
-                write!(f, "\t$\\chi_{i}$ ")?;
+                write!(f, "\t{:<12}", format!("$\\chi_{i}$"))?;
             }
         }
         Ok(())
@@ -70,11 +70,13 @@ pub struct Stats<S: SpinState> {
 
 impl<S: SpinState> Stats<S> {
     pub fn new(config: &Config, t: f64, stats_config: StatsConfig) -> Self {
-        let size = (config.dim[0] * config.dim[1] * config.dim[2] * config.sublattices) as f64;
+        let dim = config.grid.dimensions;
+        let size = (dim[0] * dim[1] * dim[2] * config.grid.sublattices) as f64;
         let partial_size = config
+            .output
             .group
             .iter()
-            .map(|i| size / config.sublattices as f64 * i.len() as f64)
+            .map(|i| size / config.grid.sublattices as f64 * i.len() as f64)
             .collect();
         Self {
             energy_sum: 0.,
@@ -83,7 +85,7 @@ impl<S: SpinState> Stats<S> {
             m_2_sum: 0.,
             m_abs_sum: 0.,
             steps: 0,
-            kb: config.kb,
+            kb: config.simulation.boltzmann_constant,
             t,
             size,
             partial_m_sum: vec![S::zero(); stats_config.group_num],
@@ -237,36 +239,36 @@ pub struct StatResult {
 
 impl fmt::Display for StatResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:.4}", self.t)?;
+        write!(f, "{}", crate::utils::fmt_fixed_width(self.t, 12))?;
         if let Some(e) = self.energy {
-            write!(f, "\t{e:.8}")?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(e, 12))?;
         }
         if let Some(c) = self.specific_heat {
-            write!(f, "\t{c:.8}")?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(c, 12))?;
         }
 
         if let Some(m) = self.magnetization {
-            write!(f, "\t{m:.8}")?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(m, 12))?;
         }
         if let Some(chi) = self.susceptibility {
-            write!(f, "\t{chi:.8}")?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(chi, 12))?;
         }
         if let Some(m_abs) = self.magnetization_abs {
-            write!(f, "\t{m_abs:.8}")?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(m_abs, 12))?;
         }
         if let Some(chi_absi) = self.susceptibility_abs {
-            write!(f, "\t{chi_absi:.8}")?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(chi_absi, 12))?;
         }
 
         if let Some(group_m) = &self.group_mag {
             for m in group_m {
-                write!(f, "\t{m:.8}")?;
+                write!(f, "\t{}", crate::utils::fmt_fixed_width(*m, 12))?;
             }
         }
 
         if let Some(group_chi) = &self.group_sus {
             for chi in group_chi {
-                write!(f, "\t{chi:.8}")?;
+                write!(f, "\t{}", crate::utils::fmt_fixed_width(*chi, 12))?;
             }
         }
         Ok(())
