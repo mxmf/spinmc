@@ -1,0 +1,114 @@
+# 蒙特卡洛模拟配置文件
+# 所有能量相关的量单位为 eV；温度单位为 K
+
+# =======================
+# 系统晶格/网格定义
+# =======================
+[grid]
+dimensions = [50, 50, 1]                # 系统尺寸 [x, y, z]（单位：晶胞数）
+sublattices = 1                         # 单胞中的子晶格数量
+spin_magnitudes = [1.0]                 # 各子晶格自旋大小（单位：μB）
+periodic_boundary = [true, true, false] # 周期性边界条件 [x, y, z]
+
+# =======================
+# 模拟控制参数
+# =======================
+[simulation]
+initial_state = "random"    # 初始自旋构型（"random" 随机 / "x" / "y" / "z" 方向）
+boltzmann_constant = 1      # kB（单位 eV/K）; (默认8.617333262145×10⁻⁵ eV/K)
+model = "ising"             # 自旋模型（"ising" / "xy" / "heisenberg"）
+equilibration_steps = 10000 # 平衡化所需的蒙特卡洛步数
+measurement_steps = 100000  # 观测统计所需的蒙特卡洛步数
+algorithm = "wolff"         # MC 算法（"metropolis" / "wolff"）
+num_threads = 10            # 并行线程数
+
+# 温度设定
+# 方式 1：直接给定温度列表（单位：K）
+temperatures = []
+# 方式 2：指定温度范围（线性间隔）
+[simulation.temperature_range]
+start = 1    # 起始温度 (K)
+end = 3      # 终止温度 (K)
+step = 0.1   # 温度步长 (K)
+
+# =======================
+# 输出设置
+# =======================
+[output]
+outfile = "result.txt" # 主输出文件路径
+stats_interval = 1     # 每隔多少步记录一次测量结果
+
+# =======================
+# 热力学量
+# =======================
+energy = true        # ⟨E⟩/N ：平均每个自旋的能量（eV）
+heat_capacity = true # (⟨E²⟩ - ⟨E⟩²) / (N kB T²) ：每个自旋的热容（eV/K）
+
+# 磁性性质（按子晶格计算）
+magnetization = true       # M = ⟨Σ s_i⟩ / N ：平均每个自旋的磁矩（μB）
+susceptibility = true      # χ = (⟨M²⟩ - ⟨M⟩²) / (N kB T) ：每个自旋的磁化率（μB² / eV）
+
+# 绝对值形式
+magnetization_abs = true   # M = ⟨|Σ s_i|⟩ / N ：绝对磁化强度（μB）
+susceptibility_abs = true  # χ(|M|) = (⟨|M|²⟩ - ⟨|M|⟩²) / (N kB T) ：由绝对磁化强度计算的磁化率（μB² / eV）
+
+# 按组输出
+group_magnetization = true   # ⟨Σ s_g⟩ / N_g ：每组自旋的磁矩（μB）
+group_susceptibility = true  # (⟨M_g²⟩ - ⟨M_g⟩²) / (N_g kB T) ：每组自旋的磁化率（μB² / eV）
+group = []                   # 自旋组定义（子晶格 ID，例如 [[0,1,2],[3,4,5]]）
+
+# =======================
+# 系统快照
+# =======================
+[snapshots]
+equilibration_interval = 1000 # 平衡化阶段保存快照的步数间隔
+measurement_interval = 1000   # 测量阶段保存快照的步数间隔
+compression_level = 8         # ZIP 压缩等级（0-9）
+save_directory = "snapshots"  # 快照保存目录
+
+# =======================
+# 晶体结构
+# =======================
+[structure]
+cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]] # 晶胞向量（Å）
+positions = [[0, 0, 0]]                  # 原子位置（分数坐标）
+tolerance = 0.0001                       # 距离比较容差（Å）
+
+# =======================
+# 交换作用定义
+# =======================
+
+# --- 方案 1：显式 from_sublattice / to_sublattice + offsets ---
+# 用于手动列出所有相互作用的自旋对
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]] # 相对位置向量
+strength = 1.0                                           # 交换常数 J（eV）
+
+
+# --- 方案 2：指定目标子晶格 + 邻居阶数 ---
+# 当已知目标子晶格时，根据配位壳（邻居阶数）自动生成相互作用对
+[[exchange]]
+to_sublattice = 0
+neighbor_order = 1  # 配位壳编号（1=最近邻，2=次近邻，等等）
+strength = 1.0      # 交换常数 J（eV） 
+
+[[exchange]]
+to_sublattice = 1
+neighbor_order = 0  # 配位壳编号（1=最近邻，2=次近邻，等等）
+strength = 1.0      # 交换常数 J（eV） 
+
+# --- 方案 3：最简定义 ---
+# 仅指定邻居阶数与强度，自动应用于所有子晶格对
+[[exchange]]
+neighbor_order = 1
+strength = 1.0      # 交换常数 J（eV）
+
+# =======================
+# 磁各向异性能配置
+# =======================
+[anisotropy]
+axis = [[0, 0, 1]] # 各向异性方向向量（程序内部自动归一化）
+strength = [0]   # 各向异性常数 D（eV）
+
