@@ -125,8 +125,8 @@ pub struct Hamiltonian {
 }
 impl Hamiltonian {
     pub fn new(config: &Config) -> Self {
-        let exchange_enable = !config.exchange_params.is_empty();
-        let anisotropy_enable = !config.anisotropy_params.is_empty();
+        let exchange_enable = !config.parsed_exchange.is_empty();
+        let anisotropy_enable = !config.parsed_anisotropy.is_empty();
 
         let ham_config = HamiltonianConfig {
             exchange_enable,

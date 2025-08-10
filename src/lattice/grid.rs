@@ -16,14 +16,14 @@ pub struct Grid<S: SpinState, R: rand::Rng> {
 }
 
 impl<S: SpinState, R: rand::Rng> Grid<S, R> {
-    pub fn new(config: Config, mut rng: R) -> anyhow::Result<Self> {
-        let dim = config.dim;
-        let num_sublattices = config.sublattices;
+    pub fn new(config: &Config, mut rng: R) -> anyhow::Result<Self> {
+        let dim = config.grid.dimensions;
+        let num_sublattices = config.grid.sublattices;
         let mut spins = vec![];
         let total_sites = dim[0] * dim[1] * dim[2];
         let mut group_index = Vec::new();
 
-        for sub_lattice_group in &config.group {
+        for sub_lattice_group in &config.output.group {
             let mut indexs = Vec::new();
 
             for sub_lattice in sub_lattice_group {
@@ -39,8 +39,8 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         }
 
         let mut calc_inputs: Vec<CalcInput<S>> = vec![];
-        for magnitude in &config.spin_magnitudes {
-            let new_spin = match config.initial_state {
+        for magnitude in &config.grid.spin_magnitudes {
+            let new_spin = match config.simulation.initial_state {
                 InitialState::Random => S::random(&mut rng, *magnitude),
                 InitialState::X => S::along_x(*magnitude)?,
                 InitialState::Y => S::along_y(*magnitude)?,
@@ -56,7 +56,7 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             ));
         }
 
-        let hamiltonian = Hamiltonian::new(&config);
+        let hamiltonian = Hamiltonian::new(config);
 
         for (sublattice, x, y, z) in iproduct!(0..num_sublattices, 0..dim[0], 0..dim[1], 0..dim[2])
         {
@@ -65,36 +65,34 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             let calc_input = &mut calc_inputs[index];
 
             let mut exchange_neighbors = vec![];
-            for exchange_param in &config.exchange_params {
-                for offset in &exchange_param.offsets {
-                    if exchange_param.from_sub == sublattice {
-                        let offset_coord = [
-                            offset[0] + x as isize,
-                            offset[1] + y as isize,
-                            offset[2] + z as isize,
-                        ];
+            for exchange in &config.parsed_exchange {
+                if exchange.from_sub == sublattice {
+                    let offset_coord = [
+                        exchange.offset[0] + x as isize,
+                        exchange.offset[1] + y as isize,
+                        exchange.offset[2] + z as isize,
+                    ];
 
-                        let offset_index_opt = safe_coord_to_index(
-                            offset_coord,
-                            exchange_param.to_sub,
-                            dim,
-                            num_sublattices,
-                            config.pbc,
-                        );
-                        if let Some(offset_index) = offset_index_opt {
-                            exchange_neighbors
-                                .push((&spins[offset_index] as *const S, exchange_param.strength));
-                            calc_input.exchange_neighbor_index.push(offset_index);
-                            calc_input.exchanges.push(exchange_param.strength);
-                        }
+                    let offset_index_opt = safe_coord_to_index(
+                        offset_coord,
+                        exchange.to_sub,
+                        dim,
+                        num_sublattices,
+                        config.grid.periodic_boundary,
+                    );
+                    if let Some(offset_index) = offset_index_opt {
+                        exchange_neighbors
+                            .push((&spins[offset_index] as *const S, exchange.strength));
+                        calc_input.exchange_neighbor_index.push(offset_index);
+                        calc_input.exchanges.push(exchange.strength);
                     }
                 }
             }
 
-            if !&config.anisotropy_params.is_empty() {
+            if !&config.parsed_anisotropy.is_empty() {
                 calc_input.anisotropy = (
-                    config.anisotropy_params[sublattice].strength,
-                    config.anisotropy_params[sublattice].saxis,
+                    config.parsed_anisotropy[sublattice].strength,
+                    config.parsed_anisotropy[sublattice].axis,
                 );
                 debug!("{:?}", calc_input.anisotropy);
             }
