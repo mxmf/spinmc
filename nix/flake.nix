@@ -18,7 +18,7 @@
       with pkgs;
       {
         packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = "MC-Curie";
+          pname = "spinmc";
           version = "0.1.0";
 
           src = ./..;
@@ -32,7 +32,7 @@
           nativeBuildInputs = [ pkgs.pkg-config ];
 
           meta = with pkgs.lib; {
-            description = "mc_curie";
+            description = "spinmc";
             license = licenses.mit;
             maintainers = with maintainers; [ mxmf ];
           };
@@ -58,7 +58,7 @@
             python3Packages.pyqt5
             qt5.qtwayland
             libsForQt5.qt5.qtbase
-
+            maturin
 
             # pkg-config
           ] ++ lib.optionals (stdenv.isLinux) [
@@ -69,6 +69,13 @@
 
           LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
 
+          shellHook = ''
+            if [ ! -d ".venv" ]; then
+              uv venv .venv
+            fi
+            source .venv/bin/activate
+            echo "uv pip env ready"
+          '';
 
         };
       }

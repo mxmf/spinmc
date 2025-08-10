@@ -22,6 +22,9 @@ hdf5-metno = { version = "0.10.1", optional = true, features = ["static", "zlib"
 rand_distr = "0.5.1"
 colored = "3.0.0"
 mimalloc = "0.1.47"
+pyo3 = { version = "0.25.1", features = ["extension-module", "generate-import-lib", "serde"] }
+serde_json = "1.0.142"
+ctrlc = "3.4.7"
 
 [features]
 default = []
@@ -33,3 +36,7 @@ codegen-units = 1
 lto = "fat"
 panic = "abort"
 strip = "symbols"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
