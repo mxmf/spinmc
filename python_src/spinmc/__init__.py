@@ -12,7 +12,9 @@ app = typer.Typer(
 
 @app.command()
 def run(
-    input_file: Annotated[Path, typer.Option("--input", "-i")] = Path("./config.toml"),  # pyright: ignore[reportCallInDefaultInitializer]
+    input_file: Annotated[Path, typer.Option("--input", "-i", exists=True)] = Path(
+        "./config.toml"
+    ),  # pyright: ignore[reportCallInDefaultInitializer]
 ):
     with open(input_file) as f:
         from ._spinmc import run_from_py  # pyright: ignore[reportUnknownVariableType]
@@ -23,7 +25,9 @@ def run(
 
 @app.command()
 def plot(
-    input_file: Annotated[Path, typer.Option("--input", "-i")] = Path("./result.txt"),  # pyright: ignore[reportCallInDefaultInitializer]
+    input_file: Annotated[Path, typer.Option("--input", "-i", exists=True)] = Path(
+        "./result.txt"
+    ),  # pyright: ignore[reportCallInDefaultInitializer]
 ):
     import matplotlib.pyplot as plt
     import math
