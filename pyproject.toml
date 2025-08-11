@@ -2,7 +2,7 @@
 name = "spinmc"
 description = "spinmc"
 readme = "README.md"
-requires-python = ">3.11"
+requires-python = ">=3.9"
 classifiers = [
   "Programming Language :: Rust",
   "Programming Language :: Python :: Implementation :: CPython",
@@ -10,8 +10,10 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "rtoml>=0.11.0",
-    "typer>=0.16.0",
+  "matplotlib",
+  "rtoml>=0.11.0",
+  "scipy>=1.2.0",       # find_peaks 
+  "typer>=0.16.0",
 ]
 
 [project.scripts]
@@ -23,12 +25,12 @@ requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
+profile = "release"
 module-name = "spinmc._spinmc"
-features = ["pyo3/extension-module"]
+features = ["pyo3/extension-module", "snapshots"]
 python-source = "python_src"
+strip = true
 
 [dependency-groups]
-dev = [
-    "matplotlib-stubs>=0.3.2",
-    "scipy-stubs>=1.16.1.0",
-]
+dev = ["matplotlib-stubs>=0.3.2", "scipy-stubs>=1.16.1.0; python_version >= '3.11'"]
+
