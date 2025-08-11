@@ -29,5 +29,6 @@ target
 **/*.h5
 
 justfile
-python_src/spinmc/__pycache__
-python_src/spinmc/_spinmc.cpython-313-x86_64-linux-gnu.so
+**/__pycache__
+**/*.so
+
