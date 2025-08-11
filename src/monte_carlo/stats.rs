@@ -18,33 +18,33 @@ pub struct StatsConfig {
 
 impl fmt::Display for StatsConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:<12}", "# T (K)")?;
+        write!(f, "{:<12}", "#T(K)")?;
         if self.energy {
-            write!(f, "\t{:<12}", "Energy (eV)")?;
+            write!(f, "\t{:<12}", "Energy(eV)")?;
         }
         if self.heat_capacity {
-            write!(f, "\t{:<12}", "$C$ (eV/K)")?;
+            write!(f, "\t{:<12}", "$C$(eV/K)")?;
         }
         if self.magnetization {
-            write!(f, "\t{:<12}", "M ($\\mu_B$)")?;
+            write!(f, "\t{:<12}", "M($\\mu_B$)")?;
         }
         if self.susceptibility {
-            write!(f, "\t{:<12}", "$\\chi$ ($\\mu_B^2/eV$)")?;
+            write!(f, "\t{:<24}", "$\\chi$($\\mu_B^2/eV$)")?;
         }
         if self.magnetization_abs {
-            write!(f, "\t{:<12}", "|M| ($\\mu_B$)")?;
+            write!(f, "\t{:<12}", "|M|($\\mu_B$)")?;
         }
         if self.susceptibility_abs {
-            write!(f, "\t{:<12}", "$|\\chi|$ ($\\mu_B^2/eV$)")?;
+            write!(f, "\t{:<24}", "$|\\chi|$($\\mu_B^2/eV$)")?;
         }
         if self.group_magnetization {
             for i in 0..self.group_num {
-                write!(f, "\t{:<12}", format!("M$_{i}$ ($\\mu_B$)"))?;
+                write!(f, "\t{:<12}", format!("M$_{i}$($\\mu_B$)"))?;
             }
         }
         if self.group_susceptibility {
             for i in 0..self.group_num {
-                write!(f, "\t{:<12}", format!("$\\chi_{i}$"))?;
+                write!(f, "\t{:<24}", format!("$\\chi_{i}(\\mu_B^2/eV$)"))?;
             }
         }
         Ok(())
@@ -251,13 +251,13 @@ impl fmt::Display for StatResult {
             write!(f, "\t{}", crate::utils::fmt_fixed_width(m, 12))?;
         }
         if let Some(chi) = self.susceptibility {
-            write!(f, "\t{}", crate::utils::fmt_fixed_width(chi, 12))?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(chi, 24))?;
         }
         if let Some(m_abs) = self.magnetization_abs {
             write!(f, "\t{}", crate::utils::fmt_fixed_width(m_abs, 12))?;
         }
         if let Some(chi_absi) = self.susceptibility_abs {
-            write!(f, "\t{}", crate::utils::fmt_fixed_width(chi_absi, 12))?;
+            write!(f, "\t{}", crate::utils::fmt_fixed_width(chi_absi, 24))?;
         }
 
         if let Some(group_m) = &self.group_mag {
@@ -268,7 +268,7 @@ impl fmt::Display for StatResult {
 
         if let Some(group_chi) = &self.group_sus {
             for chi in group_chi {
-                write!(f, "\t{}", crate::utils::fmt_fixed_width(*chi, 12))?;
+                write!(f, "\t{}", crate::utils::fmt_fixed_width(*chi, 24))?;
             }
         }
         Ok(())
