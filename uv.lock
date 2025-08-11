@@ -1483,7 +1483,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "matplotlib" },
+    { name = "matplotlib", specifier = ">=3.1,<4.0" },
     { name = "rtoml", specifier = ">=0.11.0" },
     { name = "scipy", specifier = ">=1.2.0" },
     { name = "typer", specifier = ">=0.16.0" },
