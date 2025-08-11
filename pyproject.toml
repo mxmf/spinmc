@@ -10,7 +10,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "matplotlib",
+  "matplotlib>=3.1,<4.0",
   "rtoml>=0.11.0",
   "scipy>=1.2.0",       # find_peaks 
   "typer>=0.16.0",
@@ -27,7 +27,7 @@ build-backend = "maturin"
 [tool.maturin]
 profile = "release"
 module-name = "spinmc._spinmc"
-features = ["pyo3/extension-module", "snapshots"]
+features = ["pyo3/extension-module", "snapshots", "python-extension"]
 python-source = "python_src"
 strip = true
 
