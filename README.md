@@ -97,8 +97,16 @@ strength = 1.0
 
 2. Run the simulation:
 
+- If you built from source or download from github release(Rust executable):
+
 ```bash
 spinmc -i ising.toml
+```
+
+- If you installed via Python (pip):
+
+```bash
+spinmc run -i ising.toml
 ```
 
 3. Results will be saved in `result.txt` with the requested measurements.
