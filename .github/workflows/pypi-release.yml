@@ -12,7 +12,17 @@ on:
       - master
     tags:
       - '*'
+    paths-ignore:
+      - README.md
+      - README_CN.md
+      - 'examples/**'
+      - 'nix/**'
   pull_request:
+    paths-ignore:
+      - README.md
+      - README_CN.md
+      - 'examples/**'
+      - 'nix/**'
   workflow_dispatch:
 
 permissions:
