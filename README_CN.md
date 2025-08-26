@@ -97,14 +97,6 @@ strength = 1.0
 
 2. 运行模拟
 
-- 如果你从Rust源码编译 或者从github release 下载(版本)
-
-```bash
-spinmc -i ising.toml
-```
-
-- Python 版本（通过 pip 安装）:
-
 ```bash
 spinmc run -i ising.toml
 ```
