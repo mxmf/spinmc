@@ -39,10 +39,6 @@ panic = "abort"
 strip = "symbols"
 
 
-[[bin]]
-name = "spinmc"
-path = "src/main.rs"
-
 [lib]
 crate-type = ["rlib", "cdylib"]
 
