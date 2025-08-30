@@ -13,7 +13,7 @@ pub struct Simulation {
     pub temperatures: Vec<f64>,
 
     #[serde(default)]
-    pub temperature_range: Option<TemperatureRange>,
+    pub temperature_range: Vec<TemperatureRange>,
 
     pub num_threads: usize,
     pub algorithm: Algorithm,
@@ -33,32 +33,30 @@ pub struct TemperatureRange {
 
 impl Simulation {
     pub fn validate(&mut self) -> anyhow::Result<()> {
-        match (&self.temperatures, &self.temperature_range) {
-            (temperature, None) => {
-                if temperature.is_empty() {
-                    anyhow::bail!("Either 'temperatures' or 'temperature_range' must be specified");
-                };
-                Ok(())
+        match (
+            self.temperatures.is_empty(),
+            self.temperature_range.is_empty(),
+        ) {
+            (true, true) => {
+                anyhow::bail!("Either 'temperatures' or 'temperature_range' must be specified");
             }
-            (temperature, Some(temperature_range)) => {
-                if temperature.is_empty() {
-                    let (start, end, step) = (
-                        temperature_range.start,
-                        temperature_range.end,
-                        temperature_range.step,
-                    );
+            (false, false) => {
+                anyhow::bail!(
+                    "Only one of 'temperatures' or 'temperature_range' can be specified, not both"
+                )
+            }
+            (true, false) => {
+                for tem_range in &self.temperature_range {
+                    let (start, end, step) = (tem_range.start, tem_range.end, tem_range.step);
                     let mut t = start;
                     while t <= end + 1e-8 {
                         self.temperatures.push(t);
                         t += step;
                     }
-                    Ok(())
-                } else {
-                    anyhow::bail!(
-                        "Only one of 'temperatures' or 'temperature_range' can be specified, not both"
-                    )
                 }
+                Ok(())
             }
+            (false, true) => Ok(()),
         }
     }
 }
