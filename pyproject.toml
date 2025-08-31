@@ -11,8 +11,9 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   "matplotlib>=3.1,<4.0",
+  "numpy>=2.0.2",
   "rtoml>=0.11.0",
-  "scipy>=1.2.0",       # find_peaks 
+  "scipy>=1.2.0", # find_peaks
   "typer>=0.16.0",
 ]
 
@@ -32,5 +33,18 @@ python-source = "python_src"
 strip = true
 
 [dependency-groups]
-dev = ["matplotlib-stubs>=0.3.2", "scipy-stubs>=1.16.1.0; python_version >= '3.11'"]
+dev = [
+    "matplotlib-stubs>=0.3.2",
+ "microsoft-python-type-stubs",
+ "scipy-stubs>=1.16.1.0; python_version >= '3.11'",
+]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportUnknownMemberType = "none"
+reportUnusedParameter = "none"
+
+[tool.uv.sources]
+microsoft-python-type-stubs = { git = "https://github.com/microsoft/python-type-stubs.git" }
+
 
