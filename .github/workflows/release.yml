@@ -75,6 +75,8 @@ jobs:
           fi
       
           cp "$dir/spinmc$ext" "release/spinmc$ext"
+
+          chmod +x "release/spinmc$ext"
       
           if [[ "$archive" == "zip" ]]; then
             (cd release && zip "../spinmc-$target.zip" "spinmc$ext")
