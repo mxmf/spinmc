@@ -23,13 +23,13 @@ algorithm = "wolff"         # MC 算法（"metropolis" / "wolff"）
 num_threads = 10            # 并行线程数
 
 # 温度设定
+# 注意：以下两个选项只能选择其中一个（互斥）
 # 方式 1：直接给定温度列表（单位：K）
 temperatures = []
-# 方式 2：指定温度范围（线性间隔）
-[simulation.temperature_range]
-start = 1    # 起始温度 (K)
-end = 3      # 终止温度 (K)
-step = 0.1   # 温度步长 (K)
+# 方式 2：温度范围设置 (可以合并多个区间)
+temperature_range = [
+  { start = 1, end = 3, step = 0.1 },
+]
 
 # =======================
 # 输出设置

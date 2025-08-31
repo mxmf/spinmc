@@ -23,13 +23,13 @@ algorithm = "wolff"         # MC algorithm ("metropolis"/"wolff")
 num_threads = 10            # Number of parallel threads for simulation
 
 # Temperature specification
+# NOTE: Choose only ONE of the following options (they are mutually exclusive).
 # Option 1: Explicit temperature list (K units)
 temperatures = []
-# Option 2: Temperature range with linear spacing
-[simulation.temperature_range]
-start = 1    # Starting temperature (K)
-end = 3      # Ending temperature (K)
-step = 0.1   # Temperature increment (K)
+# Option 2: Temperature range settings (multiple intervals can be combined)
+temperature_range = [
+  { start = 1, end = 3, step = 0.1 },
+]
 
 # =======================
 # Output configuration

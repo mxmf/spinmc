@@ -13,12 +13,9 @@ measurement_steps = 100000
 algorithm = "wolff"
 num_threads = 10
 
-# Manually specify the list of temperatures (choose one; this takes priority)
-temperatures = []
-[simulation.temperature_range]
-start = 0
-end = 2
-step = 0.05
+temperature_range = [
+  { start = 0, end = 2, step = 0.1 },
+]
 
 
 [output]

@@ -12,12 +12,9 @@ measurement_steps = 200000
 algorithm = "metropolis"
 num_threads = 10
 
-# Manually specify the list of temperatures (choose one; this takes priority)
-temperatures = []
-[simulation.temperature_range]
-start = 10
-end = 80
-step = 1
+temperature_range = [
+  { start = 10, end = 80, step = 1 },
+]
 
 
 [output]

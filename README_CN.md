@@ -74,10 +74,9 @@ equilibration_steps = 10000
 measurement_steps = 100000
 algorithm = "wolff"
 num_threads = 10
-[simulation.temperature_range]
-start = 1
-end = 3
-step = 0.1
+temperature_range = [
+  { start = 1, end = 3, step = 0.1 },
+]
 
 [output]
 outfile = "result.txt"
