@@ -3,6 +3,11 @@ use crate::lattice::Grid;
 use crate::spin::SpinState;
 use std::fmt;
 
+#[inline]
+fn maybe<T>(flag: bool, f: impl FnOnce() -> T) -> Option<T> {
+    if flag { Some(f()) } else { None }
+}
+
 #[derive(Clone, Debug)]
 pub struct StatsConfig {
     pub energy: bool,
@@ -165,107 +170,71 @@ impl<S: SpinState> Stats<S> {
     }
 
     pub fn result(&self) -> StatResult {
-        let energy = if self.stats_config.energy {
-            Some(self.energy_sum / self.steps as f64 / self.size)
-        } else {
-            None
-        };
+        let size = self.size;
+        let n = self.steps as f64;
+        let kbt = self.kb * self.t;
+        let cfg = &self.stats_config;
 
-        let specific_heat = if self.stats_config.heat_capacity {
-            let e_avg = self.energy_sum / self.steps as f64;
-            let e2_avg = self.energy2_sum / self.steps as f64;
-            Some((e2_avg - e_avg * e_avg) / (self.kb * self.t * self.t) / self.size)
-        } else {
-            None
-        };
+        let energy = maybe(cfg.energy, || self.energy_sum / n / size);
 
-        let magnetization = if self.stats_config.magnetization {
-            Some((self.m_sum / self.steps as f64).norm() / self.size)
-        } else {
-            None
-        };
+        let specific_heat = maybe(cfg.heat_capacity, || {
+            let e_avg = self.energy_sum / n;
+            let e2_avg = self.energy2_sum / n;
+            (e2_avg - e_avg * e_avg) / (kbt * self.t) / size
+        });
 
-        let susceptibility = if self.stats_config.susceptibility {
-            let m_avg = self.m_sum / self.steps as f64; //<M>
-            // let m_avg = self.m_norm_sum / self.steps as f64; // < |M| >
-            let m2_avg = self.m_2_sum / self.steps as f64; // < |M|^2>
-            Some((m2_avg - m_avg.norm_sqr()) / (self.kb * self.t) / self.size)
-        } else {
-            None
-        };
+        let magnetization = maybe(cfg.magnetization, || (self.m_sum / n).norm() / size);
 
-        let magnetization_abs = if self.stats_config.magnetization_abs {
-            Some(self.m_abs_sum / self.steps as f64 / self.size)
-        } else {
-            None
-        };
+        let susceptibility = maybe(cfg.susceptibility, || {
+            let m_avg = self.m_sum / n;
+            let m2_avg = self.m_2_sum / n;
+            (m2_avg - m_avg.norm_sqr()) / kbt / size
+        });
 
-        let susceptibility_abs = if self.stats_config.susceptibility_abs {
-            let m_abs_avg = self.m_abs_sum / self.steps as f64; //<M>
-            let m2_avg = self.m_2_sum / self.steps as f64; // < |M|^2>
-            Some((m2_avg - m_abs_avg * m_abs_avg) / (self.kb * self.t) / self.size)
-        } else {
-            None
-        };
+        let magnetization_abs = maybe(cfg.magnetization_abs, || self.m_abs_sum / n / size);
 
-        let group_mag = if self.stats_config.group_magnetization {
-            Some(
-                self.partial_m_sum
-                    .iter()
-                    .zip(self.partial_size.iter())
-                    .map(|(m_sum, size)| (*m_sum / self.steps as f64).norm() / size)
-                    .collect(),
-            )
-        } else {
-            None
-        };
+        let susceptibility_abs = maybe(cfg.susceptibility_abs, || {
+            let m_abs_avg = self.m_abs_sum / n;
+            let m2_avg = self.m_2_sum / n;
+            (m2_avg - m_abs_avg * m_abs_avg) / kbt / size
+        });
 
-        let group_sus = if self.stats_config.group_susceptibility {
-            Some(
-                self.partial_m_sum
-                    .iter()
-                    .zip(self.partial_m_2_sum.iter())
-                    .zip(self.partial_size.iter())
-                    .map(|((m_sum, m_2_sum), size)| {
-                        ((m_2_sum / self.steps as f64) - (*m_sum / self.steps as f64).norm_sqr())
-                            / (self.kb * self.t)
-                            / size
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
+        let group_mag = maybe(cfg.group_magnetization, || {
+            self.partial_m_sum
+                .iter()
+                .zip(self.partial_size.iter())
+                .map(|(m_sum, s)| (*m_sum / n).norm() / s)
+                .collect()
+        });
 
-        let group_mag_abs = if self.stats_config.group_magnetization_abs {
-            Some(
-                self.partial_m_abs_sum
-                    .iter()
-                    .zip(self.partial_size.iter())
-                    .map(|(m_abs_sum, size)| m_abs_sum / self.steps as f64 / size)
-                    .collect(),
-            )
-        } else {
-            None
-        };
+        let group_sus = maybe(cfg.group_susceptibility, || {
+            self.partial_m_sum
+                .iter()
+                .zip(self.partial_m_2_sum.iter())
+                .zip(self.partial_size.iter())
+                .map(|((m_sum, m2), s)| (m2 / n - (*m_sum / n).norm_sqr()) / kbt / s)
+                .collect()
+        });
 
-        let group_sus_abs = if self.stats_config.group_susceptibility_abs {
-            Some(
-                self.partial_m_abs_sum
-                    .iter()
-                    .zip(self.partial_m_2_sum.iter())
-                    .zip(self.partial_size.iter())
-                    .map(|((m_abs_sum, m_2_sum), size)| {
-                        let m_abs_avg = m_abs_sum / self.steps as f64;
-                        (m_2_sum / self.steps as f64 - m_abs_avg * m_abs_avg)
-                            / (self.kb * self.t)
-                            / size
-                    })
-                    .collect(),
-            )
-        } else {
-            None
-        };
+        let group_mag_abs = maybe(cfg.group_magnetization_abs, || {
+            self.partial_m_abs_sum
+                .iter()
+                .zip(self.partial_size.iter())
+                .map(|(m_sum, s)| m_sum / n / s)
+                .collect()
+        });
+
+        let group_sus_abs = maybe(cfg.group_susceptibility_abs, || {
+            self.partial_m_abs_sum
+                .iter()
+                .zip(self.partial_m_2_sum.iter())
+                .zip(self.partial_size.iter())
+                .map(|((m_abs_sum, m2), s)| {
+                    let m_abs_avg = m_abs_sum / n;
+                    (m2 / n - m_abs_avg * m_abs_avg) / kbt / s
+                })
+                .collect()
+        });
 
         StatResult {
             t: self.t,
