@@ -27,6 +27,8 @@ magnetization_abs = true
 susceptibility_abs = true
 group_magnetization = true
 group_susceptibility = true
+group_magnetization_abs = true
+group_susceptibility_abs = true
 group = [[0,3],[1,2]]
 stats_interval = 1
 

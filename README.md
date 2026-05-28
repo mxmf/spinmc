@@ -25,6 +25,7 @@ SpinMC is an open-source Monte Carlo simulation package for classical spin model
   - Magnetization, Susceptibility
   - Absolute magnetization, absolute susceptibility
   - Group-wise (sublattice) magnetization & susceptibility
+  - Group-wise (sublattice) Absolute magnetization & susceptibility
   - [planned] magnetic hysteresis loop
   - [planned] binder cumulant (u4)
 

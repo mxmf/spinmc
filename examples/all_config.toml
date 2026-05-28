@@ -35,7 +35,7 @@ temperature_range = [
 # Output configuration
 # =======================
 [output]
-outfile = "result.txt" # Main output file path 
+outfile = "result.txt" # Main output file path
 stats_interval = 1     # Interval for recording measurement step
 
 # =======================
@@ -48,7 +48,7 @@ heat_capacity = true # (⟨E²⟩ - ⟨E⟩²) / (N kB T²) : Heat capacity per 
 magnetization = true       # M = ⟨Σ s_i⟩ / N : Net magnetization per spin (μB units)
 susceptibility = true      # χ = (⟨M²⟩ - ⟨M⟩²) / (N kB T) : Magnetic susceptibility per spin (μB² / eV units)
 
-# Absolute value variants 
+# Absolute value variants
 magnetization_abs = true   # M = ⟨|Σ s_i|⟩ / N : Absolute magnetization per spin (μB units)
 susceptibility_abs = true  # χ(|M|) = (⟨|M|²⟩ - ⟨|M|⟩²) / (N kB T) : Susceptibility from absolute M (μB² / eV units)
 
@@ -56,6 +56,10 @@ susceptibility_abs = true  # χ(|M|) = (⟨|M|²⟩ - ⟨|M|⟩²) / (N kB T) : 
 group = []                   # Spin group definitions (indices are sublattice IDs;  e.g., [[0,1,2],[3,4,5]])
 group_magnetization = true   # ⟨Σ s_g⟩ / N_g : Per-group magnetization (μB units)
 group_susceptibility = true  # (⟨M_g²⟩ - ⟨M_g⟩²) / (N_g kB T) : Per-group susceptibility (μB² / eV units)
+
+# Absolute value variants for groups
+group_magnetization_abs = true   # ⟨|Σ s_g|⟩ / N_g : Per-group absolute magnetization (μB units)
+group_susceptibility_abs = true  # (⟨|M_g|²⟩ - ⟨|M_g|⟩²) / (N_g kB T) : Per-group susceptibility from absolute M (μB² / eV units)
 
 # =======================
 # System snapshots
@@ -88,17 +92,17 @@ strength = 1.0                                           # Exchange coupling con
 
 
 # --- Scheme 2: Target sublattice + neighbor order ---
-# Use when you know the target sublattice and want to auto-generate interaction pairs 
+# Use when you know the target sublattice and want to auto-generate interaction pairs
 # based on coordination shell (neighbor order).
 [[exchange]]
 to_sublattice = 0
 neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
-strength = 1.0      # Exchange coupling constant J (eV) 
+strength = 1.0      # Exchange coupling constant J (eV)
 
 [[exchange]]
 to_sublattice = 1
 neighbor_order = 0  # Coordination shell (1=nearest, 2=next-nearest etc.)
-strength = 1.0      # Exchange coupling constant J (eV) 
+strength = 1.0      # Exchange coupling constant J (eV)
 
 # --- Scheme 3: Minimal definition ---
 # Only specify neighbor order and strength; automatically applies to all sublattice pairs.
@@ -112,4 +116,3 @@ strength = 1.0      # Exchange coupling constant J (eV)
 [anisotropy]
 axis = [[0, 0, 1]] # Anisotropy direction vector (normalized internally)
 strength = [0]   # Anisotropy constant D (eV units)
-
