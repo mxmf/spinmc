@@ -56,12 +56,12 @@
             python3Packages.matplotlib
             python3Packages.scipy
             python3Packages.pyqt5
-            qt5.qtwayland
-            libsForQt5.qt5.qtbase
             maturin
 
             # pkg-config
           ] ++ lib.optionals (stdenv.isLinux) [
+            qt5.qtwayland
+            libsForQt5.qt5.qtbase
           ];
 
           MPLBACKEND = "QtAgg";

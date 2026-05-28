@@ -27,6 +27,8 @@ pub fn run(content: &str) -> anyhow::Result<()> {
         susceptibility_abs: run_config.output.susceptibility_abs,
         group_magnetization: run_config.output.group_magnetization,
         group_susceptibility: run_config.output.group_susceptibility,
+        group_magnetization_abs: run_config.output.group_magnetization_abs,
+        group_susceptibility_abs: run_config.output.group_susceptibility_abs,
         group_num: run_config.output.group.len(),
     };
 

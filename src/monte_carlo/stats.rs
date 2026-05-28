@@ -13,6 +13,8 @@ pub struct StatsConfig {
     pub susceptibility_abs: bool,
     pub group_magnetization: bool,
     pub group_susceptibility: bool,
+    pub group_magnetization_abs: bool,
+    pub group_susceptibility_abs: bool,
     pub group_num: usize,
 }
 
@@ -47,6 +49,16 @@ impl fmt::Display for StatsConfig {
                 write!(f, "\t{:<24}", format!("$\\chi_{i}(\\mu_B^2/eV$)"))?;
             }
         }
+        if self.group_magnetization_abs {
+            for i in 0..self.group_num {
+                write!(f, "\t{:<12}", format!("|M|_{i}($\\mu_B$)"))?;
+            }
+        }
+        if self.group_susceptibility_abs {
+            for i in 0..self.group_num {
+                write!(f, "\t{:<24}", format!("$|\\chi|_{i}(\\mu_B^2/eV$)"))?;
+            }
+        }
         Ok(())
     }
 }
@@ -65,6 +77,7 @@ pub struct Stats<S: SpinState> {
     pub stats_config: StatsConfig,
     pub partial_m_sum: Vec<S>,
     pub partial_m_2_sum: Vec<f64>,
+    pub partial_m_abs_sum: Vec<f64>,
     pub partial_size: Vec<f64>,
 }
 
@@ -90,6 +103,7 @@ impl<S: SpinState> Stats<S> {
             size,
             partial_m_sum: vec![S::zero(); stats_config.group_num],
             partial_m_2_sum: vec![0.0; stats_config.group_num],
+            partial_m_abs_sum: vec![0.0; stats_config.group_num],
             partial_size,
             stats_config,
         }
@@ -124,12 +138,25 @@ impl<S: SpinState> Stats<S> {
             }
         }
 
-        if self.stats_config.group_magnetization || self.stats_config.group_susceptibility {
+        if self.stats_config.group_magnetization
+            || self.stats_config.group_susceptibility
+            || self.stats_config.group_magnetization_abs
+            || self.stats_config.group_susceptibility_abs
+        {
             for i in 0..self.stats_config.group_num {
                 let partial_spin_vec = &grid.partial_spin_vector(i);
-                self.partial_m_sum[i] += partial_spin_vec;
-                if self.stats_config.group_susceptibility {
+                if self.stats_config.group_magnetization || self.stats_config.group_susceptibility {
+                    self.partial_m_sum[i] += partial_spin_vec;
+                }
+                if self.stats_config.group_susceptibility
+                    || self.stats_config.group_susceptibility_abs
+                {
                     self.partial_m_2_sum[i] += partial_spin_vec.norm_sqr();
+                }
+                if self.stats_config.group_magnetization_abs
+                    || self.stats_config.group_susceptibility_abs
+                {
+                    self.partial_m_abs_sum[i] += partial_spin_vec.norm();
                 }
             }
         }
@@ -210,6 +237,36 @@ impl<S: SpinState> Stats<S> {
             None
         };
 
+        let group_mag_abs = if self.stats_config.group_magnetization_abs {
+            Some(
+                self.partial_m_abs_sum
+                    .iter()
+                    .zip(self.partial_size.iter())
+                    .map(|(m_abs_sum, size)| m_abs_sum / self.steps as f64 / size)
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
+        let group_sus_abs = if self.stats_config.group_susceptibility_abs {
+            Some(
+                self.partial_m_abs_sum
+                    .iter()
+                    .zip(self.partial_m_2_sum.iter())
+                    .zip(self.partial_size.iter())
+                    .map(|((m_abs_sum, m_2_sum), size)| {
+                        let m_abs_avg = m_abs_sum / self.steps as f64;
+                        (m_2_sum / self.steps as f64 - m_abs_avg * m_abs_avg)
+                            / (self.kb * self.t)
+                            / size
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
         StatResult {
             t: self.t,
             energy,
@@ -220,6 +277,8 @@ impl<S: SpinState> Stats<S> {
             susceptibility_abs,
             group_mag,
             group_sus,
+            group_mag_abs,
+            group_sus_abs,
         }
     }
 }
@@ -235,6 +294,8 @@ pub struct StatResult {
     pub susceptibility_abs: Option<f64>, // ( < |M|^2 > - <M>^2)/(N * k_B * T)
     pub group_mag: Option<Vec<f64>>,
     pub group_sus: Option<Vec<f64>>,
+    pub group_mag_abs: Option<Vec<f64>>,
+    pub group_sus_abs: Option<Vec<f64>>,
 }
 
 impl fmt::Display for StatResult {
@@ -268,6 +329,16 @@ impl fmt::Display for StatResult {
 
         if let Some(group_chi) = &self.group_sus {
             for chi in group_chi {
+                write!(f, "\t{}", crate::utils::fmt_fixed_width(*chi, 24))?;
+            }
+        }
+        if let Some(group_m_abs) = &self.group_mag_abs {
+            for m in group_m_abs {
+                write!(f, "\t{}", crate::utils::fmt_fixed_width(*m, 12))?;
+            }
+        }
+        if let Some(group_chi_abs) = &self.group_sus_abs {
+            for chi in group_chi_abs {
                 write!(f, "\t{}", crate::utils::fmt_fixed_width(*chi, 24))?;
             }
         }

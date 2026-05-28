@@ -90,6 +90,8 @@ class Spinmc:
         susceptibility_abs: bool = True,
         group_magnetization: bool = True,
         group_susceptibility: bool = True,
+        group_magnetization_abs: bool = True,
+        group_susceptibility_abs: bool = True,
         group: list[list[int]] = [],
     ):
         self.__save_dict("output")

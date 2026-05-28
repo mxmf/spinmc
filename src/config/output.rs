@@ -22,6 +22,10 @@ pub struct Output {
     pub group_magnetization: bool,
     #[serde(default = "default_false")]
     pub group_susceptibility: bool,
+    #[serde(default = "default_false")]
+    pub group_magnetization_abs: bool,
+    #[serde(default = "default_false")]
+    pub group_susceptibility_abs: bool,
     #[serde(default)]
     pub group: Vec<Vec<usize>>,
     #[serde(default = "default_stats_interval")]
@@ -42,7 +46,7 @@ fn default_stats_interval() -> usize {
 
 impl Output {
     pub fn validate(&self) -> anyhow::Result<()> {
-        if let (false, false, false, false, false, false, false, false) = (
+        if let (false, false, false, false, false, false, false, false, false, false) = (
             self.energy,
             self.heat_capacity,
             self.magnetization,
@@ -51,6 +55,8 @@ impl Output {
             self.susceptibility_abs,
             self.group_magnetization,
             self.group_susceptibility,
+            self.group_magnetization_abs,
+            self.group_susceptibility_abs,
         ) {
             anyhow::bail!("No output fields specified: Please enable at least one observable.")
         }
@@ -92,7 +98,21 @@ impl fmt::Display for Output {
         )?;
         writeln!(f, "  Group Magnetization: {}", self.group_magnetization)?;
         writeln!(f, "  Group Susceptibility: {}", self.group_susceptibility)?;
-        if self.group_magnetization || self.group_susceptibility {
+        writeln!(
+            f,
+            "  Group |Magnetization|: {}",
+            self.group_magnetization_abs
+        )?;
+        writeln!(
+            f,
+            "  Group |Susceptibility|: {}",
+            self.group_susceptibility_abs
+        )?;
+        if self.group_magnetization
+            || self.group_susceptibility
+            || self.group_magnetization_abs
+            || self.group_susceptibility_abs
+        {
             writeln!(f, "  Groups:")?;
             for (i, group) in self.group.iter().enumerate() {
                 writeln!(f, "    Group {i}: {group:?}")?;
