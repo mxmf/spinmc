@@ -13,6 +13,9 @@ pub struct CalcInput<S: SpinState> {
     pub anisotropy: (f64, [f64; 3]),
 }
 
+unsafe impl<S: SpinState> Send for CalcInput<S> {}
+unsafe impl<S: SpinState> Sync for CalcInput<S> {}
+
 impl<S: SpinState> Default for CalcInput<S> {
     fn default() -> Self {
         CalcInput {

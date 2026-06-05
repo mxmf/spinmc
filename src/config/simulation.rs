@@ -16,9 +16,16 @@ pub struct Simulation {
     pub temperature_range: Vec<TemperatureRange>,
 
     pub num_threads: usize,
+
+    #[serde(default = "default_pt_interval")]
+    pub pt_interval: usize,
+
     pub algorithm: Algorithm,
     #[serde(default = "default_boltzmann_constant")]
     pub boltzmann_constant: f64,
+}
+fn default_pt_interval() -> usize {
+    0
 }
 fn default_boltzmann_constant() -> f64 {
     8.617333262145e-5 // eV/K
@@ -75,6 +82,15 @@ impl fmt::Display for Simulation {
         )?;
         writeln!(f, "  Algorithm: {:?}", self.algorithm)?;
         writeln!(f, "  Threads: {}", self.num_threads)?;
+        if self.pt_interval > 0 {
+            writeln!(
+                f,
+                "  PT (Parallel Tempering): enabled, swap every {} sweeps",
+                self.pt_interval
+            )?;
+        } else {
+            writeln!(f, "  PT (Parallel Tempering): disabled")?;
+        }
         write!(f, "  Temperatures (K):\n  ")?;
         for t in &self.temperatures {
             write!(f, "{t:.4}   ")?;

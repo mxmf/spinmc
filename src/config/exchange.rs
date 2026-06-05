@@ -105,20 +105,18 @@ impl Exchange {
     }
 
     pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
-        if let Some(from) = self.from_sublattice {
-            if from >= sublattices {
+        if let Some(from) = self.from_sublattice
+            && from >= sublattices {
                 anyhow::bail!(
                     "from_sublattice index ({from}) is out of range, must be less than sublattices count ({sublattices})"
                 );
             }
-        }
-        if let Some(to) = self.to_sublattice {
-            if to >= sublattices {
+        if let Some(to) = self.to_sublattice
+            && to >= sublattices {
                 anyhow::bail!(
                     "to_sublattice index ({to}) is out of range, must be less than sublattices count ({sublattices})"
                 );
             }
-        }
 
         Ok(())
     }

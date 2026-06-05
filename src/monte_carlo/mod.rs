@@ -25,3 +25,18 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for AnyMC<R> {
         }
     }
 }
+
+impl<R: rand::Rng> AnyMC<R> {
+    pub fn beta(&self) -> f64 {
+        match self {
+            AnyMC::Metropolis(m) => m.beta,
+            AnyMC::Wolff(w) => w.beta,
+        }
+    }
+    pub fn set_beta(&mut self, beta: f64) {
+        match self {
+            AnyMC::Metropolis(m) => m.beta = beta,
+            AnyMC::Wolff(w) => w.beta = beta,
+        }
+    }
+}
