@@ -112,13 +112,12 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
     let stats_interval = config.output.stats_interval;
     let total_steps = equil_steps + meas_steps;
     let num_threads = rayon::current_num_threads();
-    let progress_interval = (total_steps / 100).max(1) as u64;
 
     let multi = MultiProgress::new();
     let pb = multi.add(ProgressBar::new(stats.len() as u64));
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} temperatures ({eta})")
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} temperatures")
             .unwrap()
             .progress_chars("#>-"),
     );
@@ -127,7 +126,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
             let sp = multi.insert(i + 1, ProgressBar::new(total_steps as u64));
             sp.set_style(
                 ProgressStyle::default_bar()
-                    .template("  {msg} [{bar:20.cyan/dim}] {pos}/{len}")
+                    .template("  {msg} [{elapsed_precise}/{eta}] [{bar:20.cyan/dim}] {pos}/{len}")
                     .unwrap()
                     .progress_chars("█░"),
             );
@@ -156,9 +155,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
 
             for _step in 0..equil_steps {
                 mc.step(&mut grid);
-                if _step as u64 % progress_interval == 0 {
-                    sub_pb.set_position(_step as u64);
-                }
+                sub_pb.set_position(_step as u64);
 
                 #[cfg(feature = "snapshots")]
                 if let Some(snapshots) = &config.snapshots
@@ -174,9 +171,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
                 if step % stats_interval == 0 {
                     stat.record(&grid);
                 }
-                if step as u64 % progress_interval == 0 {
-                    sub_pb.set_position(equil_steps as u64 + step as u64);
-                }
+                sub_pb.set_position(equil_steps as u64 + step as u64);
 
                 #[cfg(feature = "snapshots")]
                 if let Some(snapshots) = &config.snapshots
