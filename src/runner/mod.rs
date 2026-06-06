@@ -1,3 +1,4 @@
+use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rand::Rng;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
@@ -5,6 +6,7 @@ use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::info;
 
 use crate::{
@@ -118,13 +120,43 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
     let equil_steps = config.simulation.equilibration_steps;
     let meas_steps = config.simulation.measurement_steps;
     let stats_interval = config.output.stats_interval;
+    let total_steps = equil_steps + meas_steps;
+    let num_threads = rayon::current_num_threads();
+    let progress_interval = (total_steps / 100).max(1) as u64;
+
+    let multi = MultiProgress::new();
+    let pb = multi.add(ProgressBar::new(stats.len() as u64));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} temperatures ({eta})")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+    let sub_pbs: Vec<ProgressBar> = (0..num_threads)
+        .map(|i| {
+            let sp = multi.insert(i + 1, ProgressBar::new(total_steps as u64));
+            sp.set_style(
+                ProgressStyle::default_bar()
+                    .template("  {msg} [{bar:20.cyan/dim}] {pos}/{len}")
+                    .unwrap()
+                    .progress_chars("█░"),
+            );
+            sp
+        })
+        .collect();
+    let sub_counter = AtomicUsize::new(0);
 
     stats
         .into_par_iter()
         .zip(algos.into_par_iter())
         .zip(grids.into_par_iter())
+        .progress_with(pb)
         .enumerate()
         .map(|(idx, ((mut stat, mut mc), mut grid))| {
+            let bar_id = sub_counter.fetch_add(1, Ordering::Relaxed) % num_threads;
+            let sub_pb = &sub_pbs[bar_id];
+            sub_pb.reset();
+            sub_pb.set_message(format!("T={:.4}", config.simulation.temperatures[idx]));
             #[cfg(not(feature = "snapshots"))]
             let _ = idx;
             #[cfg(feature = "snapshots")]
@@ -134,6 +166,9 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
 
             for _step in 0..equil_steps {
                 mc.step(&mut grid);
+                if _step as u64 % progress_interval == 0 {
+                    sub_pb.set_position(_step as u64);
+                }
 
                 #[cfg(feature = "snapshots")]
                 if let Some(snapshots) = &config.snapshots
@@ -143,10 +178,14 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
                     equil_snapshots.push(grid.spins_to_array());
                 }
             }
+            sub_pb.set_position(equil_steps as u64);
             for step in 0..meas_steps {
                 mc.step(&mut grid);
                 if step % stats_interval == 0 {
                     stat.record(&grid);
+                }
+                if step as u64 % progress_interval == 0 {
+                    sub_pb.set_position(equil_steps as u64 + step as u64);
                 }
 
                 #[cfg(feature = "snapshots")]
@@ -174,6 +213,8 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
                     }
                 };
             };
+            sub_pb.set_position(total_steps as u64);
+            sub_pb.finish_with_message(format!("T={:.4} ✓", config.simulation.temperatures[idx]));
 
             stat.result()
         })
@@ -195,6 +236,14 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
     let total_steps = equil_steps + meas_steps;
 
     let mut temp_to_replica: Vec<usize> = (0..n_temps).collect();
+
+    let pb = ProgressBar::new(total_steps as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} sweeps ({eta})")
+            .unwrap()
+            .progress_chars("#>-"),
+    );
 
     let mut sweep = 0usize;
     while sweep < total_steps {
@@ -253,7 +302,9 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
         }
 
         sweep = batch_end;
+        pb.set_position(sweep as u64);
     }
+    pb.finish_with_message("done");
 }
 
 // Dispatch
