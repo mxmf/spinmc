@@ -12,13 +12,14 @@ equilibration_steps = 10000
 measurement_steps = 10000
 algorithm = "wolff"
 num_threads = 10
+pt_interval = 10
 
 temperature_range = [
   { start = 0, end = 2, step = 0.1 },
 ]
 
 [output]
-outfile = "result.txt"
+savefile = "result.txt"
 stats_interval = 1
 energy = true
 heat_capacity = true

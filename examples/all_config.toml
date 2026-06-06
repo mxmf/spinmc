@@ -21,6 +21,7 @@ equilibration_steps = 10000 # Number of MC steps for equilibration
 measurement_steps = 100000  # Number of MC steps for measurements
 algorithm = "wolff"         # MC algorithm ("metropolis"/"wolff")
 num_threads = 10            # Number of parallel threads for simulation
+pt_interval = 25            # PT swap interval (sweeps); 0 to disable
 
 # Temperature specification
 # NOTE: Choose only ONE of the following options (they are mutually exclusive).
@@ -35,7 +36,7 @@ temperature_range = [
 # Output configuration
 # =======================
 [output]
-outfile = "result.txt" # Main output file path
+savefile = "result.txt" # Main output file path
 stats_interval = 1     # Interval for recording measurement step
 
 # =======================

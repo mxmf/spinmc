@@ -21,6 +21,7 @@ equilibration_steps = 10000 # 平衡化所需的蒙特卡洛步数
 measurement_steps = 100000  # 观测统计所需的蒙特卡洛步数
 algorithm = "wolff"         # MC 算法（"metropolis" / "wolff"）
 num_threads = 10            # 并行线程数
+pt_interval = 25            # PT 交换间隔（sweeps）；设为 0 禁用 PT
 
 # 温度设定
 # 注意：以下两个选项只能选择其中一个（互斥）
@@ -35,7 +36,7 @@ temperature_range = [
 # 输出设置
 # =======================
 [output]
-outfile = "result.txt" # 主输出文件路径
+savefile = "result.txt" # 主输出文件路径
 stats_interval = 1     # 每隔多少步记录一次测量结果
 
 # =======================

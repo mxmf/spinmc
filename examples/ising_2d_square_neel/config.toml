@@ -12,13 +12,14 @@ equilibration_steps = 100000
 measurement_steps = 100000
 algorithm = "metropolis"
 num_threads = 10
+pt_interval = 25
 temperature_range = [
   { start = 1, end = 3, step = 0.1 },
 ]
 
 
 [output]
-outfile = "result.txt"
+savefile = "result.txt"
 energy = true
 heat_capacity = true
 magnetization = true
