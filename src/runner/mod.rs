@@ -16,16 +16,6 @@ use crate::{
     spin::{HeisenbergSpin, IsingSpin, SpinState, XYSpin},
 };
 
-/// Allows sharing &mut [Stats<S>] across threads via raw pointer.
-/// Each thread writes to disjoint elements (guaranteed by temp_to_replica being a permutation).
-struct StatsRef<S: SpinState>(*mut Stats<S>);
-unsafe impl<S: SpinState + Send> Send for StatsRef<S> {}
-impl<S: SpinState> Clone for StatsRef<S> {
-    fn clone(&self) -> Self {
-        StatsRef(self.0)
-    }
-}
-
 pub fn run(content: &str) -> anyhow::Result<()> {
     let run_config = Config::new(content)?;
     info!("{run_config}");
@@ -222,12 +212,15 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
 }
 
 // PT: batched MC (pt_interval steps per fork-join) + parallel measurement + even-odd swap
+// Each parallel thread writes to stats[r] directly (indexed by replica).
+// When a PT swap accepts, stats entries are swapped alongside betas so that
+// each Stats object follows the temperature it represents.
 fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
     config: &Config,
     stats: &mut [Stats<S>],
     algos: &mut [AnyMC<R>],
     grids: &mut [Grid<S, R>],
-) {
+) -> Vec<StatResult> {
     let n_temps = config.simulation.temperatures.len();
     let pt_interval = config.simulation.pt_interval;
     let equil_steps = config.simulation.equilibration_steps;
@@ -235,6 +228,7 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
     let stats_interval = config.output.stats_interval;
     let total_steps = equil_steps + meas_steps;
 
+    // temp_to_replica[t] = replica index currently simulating temperature t
     let mut temp_to_replica: Vec<usize> = (0..n_temps).collect();
 
     let pb = ProgressBar::new(total_steps as u64);
@@ -251,29 +245,21 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
         let batch_nsteps = batch_end - sweep;
         let start = sweep;
 
-        // Batch: pt_interval MC steps + measurements, ONE fork-join, cache stays hot
-        let sr = StatsRef(stats.as_mut_ptr());
-        let ttr_ptr = temp_to_replica.as_ptr() as usize;
+        // Parallel batch: each replica writes to its own stats[r].
+        // Stats are indexed by replica (same as grids/algos), so
+        // par_iter_mut gives each thread exclusive access to its own stat.
         grids
             .par_iter_mut()
             .zip(algos.par_iter_mut())
-            .enumerate()
-            .for_each_with((sr, ttr_ptr), |(sr, ttrp), (r, (grid, mc))| {
-                let stats = unsafe { std::slice::from_raw_parts_mut(sr.0, n_temps) };
-                let ttr = unsafe { std::slice::from_raw_parts(*ttrp as *const usize, n_temps) };
-
+            .zip(stats.par_iter_mut())
+            .for_each(|((grid, mc), stat)| {
                 for offset in 0..batch_nsteps {
                     let s = start + offset;
                     mc.step(grid);
                     if s >= equil_steps {
                         let do_meas = stats_interval == 0 || s % stats_interval == 0;
                         if do_meas {
-                            for t in 0..n_temps {
-                                if ttr[t] == r {
-                                    stats[t].record(grid);
-                                    break;
-                                }
-                            }
+                            stat.record(grid);
                         }
                     }
                 }
@@ -295,6 +281,9 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
                     if delta >= rng.random::<f64>().ln() {
                         algos[i].set_beta(beta_j);
                         algos[j].set_beta(beta_i);
+                        // Swap stats alongside temperatures so each Stats
+                        // object tracks the same temperature throughout.
+                        stats.swap(i, j);
                         temp_to_replica.swap(t, t + 1);
                     }
                 }
@@ -305,6 +294,15 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
         pb.set_position(sweep as u64);
     }
     pb.finish_with_message("done");
+
+    // Return results in temperature order.
+    // After all swaps, stats[temp_to_replica[t]] holds data for temperature t.
+    (0..n_temps)
+        .map(|t| {
+            let r = temp_to_replica[t];
+            stats[r].result()
+        })
+        .collect()
 }
 
 // Dispatch
@@ -323,8 +321,7 @@ fn run_simulations<S: SpinState>(
             "PT enabled, swap every {} sweeps",
             config.simulation.pt_interval
         );
-        run_pt(config, &mut stats, &mut algos, &mut grids);
-        Ok(stats.into_iter().map(|s| s.result()).collect())
+        Ok(run_pt(config, &mut stats, &mut algos, &mut grids))
     } else {
         info!("Non-PT mode, independent temperatures");
         Ok(run_independent(config, stats, algos, grids))
