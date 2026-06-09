@@ -77,7 +77,7 @@ class Plot:
 
 
 def main(
-    cmd: Run | Plot = Run(),
+    cmd: Run | Plot,
     version: Annotated[
         bool,
         tyro.conf.arg(aliases=["-V", "-v"], help_behavior_hint=""),
