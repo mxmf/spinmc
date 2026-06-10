@@ -1,11 +1,13 @@
-use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar, ProgressStyle};
+use indicatif::{
+    MultiProgress, ParallelProgressIterator, ProgressBar, ProgressDrawTarget, ProgressStyle,
+};
 use rand::Rng;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
-use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, IsTerminal, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tracing::info;
 
@@ -68,6 +70,42 @@ struct Systems<S: SpinState> {
     algos: Vec<AnyMC<Pcg64Mcg>>,
 }
 
+#[derive(Clone, Copy)]
+struct ProgressConfig {
+    use_bars: bool,
+    log_interval: usize,
+}
+
+fn progress_config(config: &Config, total_steps: usize) -> ProgressConfig {
+    let use_bars = config.output.progress_bar && std::io::stderr().is_terminal();
+    let log_interval = if config.output.progress_log_interval > 0 {
+        config.output.progress_log_interval
+    } else if use_bars {
+        0
+    } else {
+        auto_progress_log_interval(total_steps)
+    };
+
+    ProgressConfig {
+        use_bars,
+        log_interval,
+    }
+}
+
+fn auto_progress_log_interval(total_steps: usize) -> usize {
+    (total_steps / 20).max(1)
+}
+
+fn should_log_progress(completed: usize, total: usize, interval: usize) -> bool {
+    interval > 0 && (completed == total || completed % interval == 0)
+}
+
+fn maybe_hide_progress_bar(pb: &ProgressBar, progress: ProgressConfig) {
+    if !progress.use_bars {
+        pb.set_draw_target(ProgressDrawTarget::hidden());
+    }
+}
+
 fn build_systems<S: SpinState>(
     config: &Config,
     stats_config: &StatsConfig,
@@ -112,9 +150,12 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
     let stats_interval = config.output.stats_interval;
     let total_steps = equil_steps + meas_steps;
     let num_threads = rayon::current_num_threads();
+    let progress = progress_config(config, total_steps);
+    let temp_count = stats.len();
 
     let multi = MultiProgress::new();
     let pb = multi.add(ProgressBar::new(stats.len() as u64));
+    maybe_hide_progress_bar(&pb, progress);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} temperatures")
@@ -124,6 +165,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
     let sub_pbs: Vec<ProgressBar> = (0..num_threads)
         .map(|i| {
             let sp = multi.insert(i + 1, ProgressBar::new(total_steps as u64));
+            maybe_hide_progress_bar(&sp, progress);
             sp.set_style(
                 ProgressStyle::default_bar()
                     .template("  {msg} [{elapsed_precise}/{eta}] [{bar:20.cyan/dim}] {pos}/{len}")
@@ -146,8 +188,6 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
             let sub_pb = &sub_pbs[bar_id];
             sub_pb.reset();
             sub_pb.set_message(format!("T={:.4}", config.simulation.temperatures[idx]));
-            #[cfg(not(feature = "snapshots"))]
-            let _ = idx;
             #[cfg(feature = "snapshots")]
             let t = config.simulation.temperatures[idx];
             #[cfg(feature = "snapshots")]
@@ -155,7 +195,19 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
 
             for _step in 0..equil_steps {
                 mc.step(&mut grid);
-                sub_pb.set_position(_step as u64);
+                let completed = _step + 1;
+                sub_pb.set_position(completed as u64);
+                if should_log_progress(completed, total_steps, progress.log_interval) {
+                    info!(
+                        "Progress: temperature={}/{}, T={:.4}, phase=equilibration, sweep={}/{}, {:.1}%",
+                        idx + 1,
+                        temp_count,
+                        config.simulation.temperatures[idx],
+                        completed,
+                        total_steps,
+                        completed as f64 * 100.0 / total_steps as f64
+                    );
+                }
 
                 #[cfg(feature = "snapshots")]
                 if let Some(snapshots) = &config.snapshots
@@ -171,7 +223,19 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
                 if step % stats_interval == 0 {
                     stat.record(&grid);
                 }
-                sub_pb.set_position(equil_steps as u64 + step as u64);
+                let completed = equil_steps + step + 1;
+                sub_pb.set_position(completed as u64);
+                if should_log_progress(completed, total_steps, progress.log_interval) {
+                    info!(
+                        "Progress: temperature={}/{}, T={:.4}, phase=measurement, sweep={}/{}, {:.1}%",
+                        idx + 1,
+                        temp_count,
+                        config.simulation.temperatures[idx],
+                        completed,
+                        total_steps,
+                        completed as f64 * 100.0 / total_steps as f64
+                    );
+                }
 
                 #[cfg(feature = "snapshots")]
                 if let Some(snapshots) = &config.snapshots
@@ -222,11 +286,13 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
     let meas_steps = config.simulation.measurement_steps;
     let stats_interval = config.output.stats_interval;
     let total_steps = equil_steps + meas_steps;
+    let progress = progress_config(config, total_steps);
 
     // temp_to_replica[t] = replica index currently simulating temperature t
     let mut temp_to_replica: Vec<usize> = (0..n_temps).collect();
 
     let pb = ProgressBar::new(total_steps as u64);
+    maybe_hide_progress_bar(&pb, progress);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} sweeps ({eta})")
@@ -287,6 +353,14 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
 
         sweep = batch_end;
         pb.set_position(sweep as u64);
+        if should_log_progress(sweep, total_steps, progress.log_interval) {
+            info!(
+                "Progress: parallel_tempering sweep={}/{}, {:.1}%",
+                sweep,
+                total_steps,
+                sweep as f64 * 100.0 / total_steps as f64
+            );
+        }
     }
     pb.finish_with_message("done");
 

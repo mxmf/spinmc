@@ -38,6 +38,8 @@ temperature_range = [
 [output]
 savefile = "result.txt" # Main output file path
 stats_interval = 1     # Interval for recording measurement step
+progress_bar = true    # Show interactive progress bars when running in a terminal
+progress_log_interval = 0 # Log progress every N sweeps; 0 = auto in non-interactive jobs
 
 # =======================
 # Thermodynamic quantities

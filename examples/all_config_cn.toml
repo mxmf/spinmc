@@ -38,6 +38,8 @@ temperature_range = [
 [output]
 savefile = "result.txt" # 主输出文件路径
 stats_interval = 1     # 每隔多少步记录一次测量结果
+progress_bar = true    # 在交互式终端中显示进度条
+progress_log_interval = 0 # 每隔 N sweep 输出一次进度日志；0 表示非交互式任务中自动选择间隔
 
 # =======================
 # 热力学量

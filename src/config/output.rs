@@ -30,10 +30,18 @@ pub struct Output {
     pub group: Vec<Vec<usize>>,
     #[serde(default = "default_stats_interval")]
     pub stats_interval: usize,
+    #[serde(default = "default_true")]
+    pub progress_bar: bool,
+    #[serde(default)]
+    pub progress_log_interval: usize,
 }
 
 fn default_false() -> bool {
     false
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_outfile() -> String {
@@ -69,6 +77,8 @@ impl fmt::Display for Output {
         writeln!(f, "\nOutput:")?;
         writeln!(f, "  Output File: {}", self.savefile)?;
         writeln!(f, "  stats_interval: {}", self.stats_interval)?;
+        writeln!(f, "  Progress Bar: {}", self.progress_bar)?;
+        writeln!(f, "  Progress Log Interval: {}", self.progress_log_interval)?;
 
         writeln!(f, "  Energy [E = <H> / N ]: {}", self.energy)?;
         writeln!(
