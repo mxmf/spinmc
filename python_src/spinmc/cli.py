@@ -1,14 +1,13 @@
-import dataclasses
-import sys
 from pathlib import Path
 from typing import Annotated
+import cappa
+from dataclasses import dataclass
+from cappa import Subcommands
 
-import tyro
 
-
-@dataclasses.dataclass
+@dataclass
 class Run:
-    input: Annotated[Path, tyro.conf.arg(aliases=["-i"])] = Path("./config.toml")
+    input: Annotated[Path, cappa.Arg(short="-i", parse=Path)] = Path("./config.toml")
 
     def __call__(self):
 
@@ -19,9 +18,9 @@ class Run:
             run_from_py(toml_str)
 
 
-@dataclasses.dataclass
+@dataclass
 class Plot:
-    input: Annotated[Path, tyro.conf.arg(aliases=["-i"])] = Path("./result.txt")
+    input: Annotated[Path, cappa.Arg(short="-i", parse=Path)] = Path("./result.txt")
 
     def __call__(self):
 
@@ -76,28 +75,12 @@ class Plot:
         plt.show()
 
 
-def main(
-    cmd: Run | Plot,
-    version: Annotated[
-        bool,
-        tyro.conf.arg(aliases=["-V", "-v"], help_behavior_hint=""),
-        tyro.conf.FlagCreatePairsOff,
-        tyro.conf.CascadeSubcommandArgs,
-    ] = False,
-):
-    if version:
-        from importlib.metadata import version as _ver
-
-        print(_ver("spinmc"))
-        sys.exit(0)
-    cmd()
+@dataclass
+class Spinmc:
+    cmd: Subcommands[Run | Plot]
 
 
 def app():
-    tyro.cli(
-        main,
-        config=[
-            tyro.conf.OmitSubcommandPrefixes,
-            tyro.conf.OmitArgPrefixes,
-        ],
-    )
+    from importlib.metadata import version as _ver
+
+    cappa.invoke(Spinmc, version=_ver("spinmc"))
