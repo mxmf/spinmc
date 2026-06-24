@@ -2,7 +2,7 @@
   description = "Rust devshell for Iced";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
   };
@@ -52,20 +52,18 @@
 
 
             uv
-            python3
-            python3Packages.matplotlib
-            python3Packages.scipy
-            python3Packages.pyqt5
             maturin
 
-            # pkg-config
           ] ++ lib.optionals (stdenv.isLinux) [
             qt5.qtwayland
-            libsForQt5.qt5.qtbase
+            libsForQt5.qtbase
+            python3
+            python3Packages.matplotlib
+            python3Packages.pyqt5
           ];
 
-          MPLBACKEND = "QtAgg";
-
+          MPLBACKEND = lib.optionalString stdenv.isLinux "QtAgg";
+          # QT_PLUGIN_PATH = lib.optionalString stdenv.isLinux "${pkgs.lib.getBin pkgs.qt5.qtwayland}/${pkgs.libsForQt5.qtbase.qtPluginPrefix}";
 
           LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
 
