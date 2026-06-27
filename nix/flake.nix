@@ -38,44 +38,50 @@
           };
         };
 
-        devShells.default = mkShell rec {
-          buildInputs = [
-            rust-analyzer
-            rust-bin.stable.latest.default
-            cargo-flamegraph
-            cargo-expand
-            cargo-show-asm
+        devShells.default = mkShell (
+          rec {
+            buildInputs = [
+              rust-analyzer
+              rust-bin.stable.latest.default
+              cargo-flamegraph
+              cargo-expand
+              cargo-show-asm
 
-            hdf5
-            cmake
-            pkg-config
+              hdf5
+              cmake
+              pkg-config
 
+              uv
+              maturin
+            ] ++ lib.optionals (stdenv.isLinux) [
+              qt5.qtwayland
+              libsForQt5.qtbase
+              python3
+              python3Packages.matplotlib
+              python3Packages.pyqt5
+            ];
 
-            uv
-            maturin
+            CMAKE_POLICY_VERSION_MINIMUM = "3.5";
 
-          ] ++ lib.optionals (stdenv.isLinux) [
-            qt5.qtwayland
-            libsForQt5.qtbase
-            python3
-            python3Packages.matplotlib
-            python3Packages.pyqt5
-          ];
+            MPLBACKEND = lib.optionalString stdenv.isLinux "QtAgg";
 
-          MPLBACKEND = lib.optionalString stdenv.isLinux "QtAgg";
-          # QT_PLUGIN_PATH = lib.optionalString stdenv.isLinux "${pkgs.lib.getBin pkgs.qt5.qtwayland}/${pkgs.libsForQt5.qtbase.qtPluginPrefix}";
+            LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
 
-          LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
-
-          shellHook = ''
-            if [ ! -d ".venv" ]; then
-              uv venv .venv
-            fi
-            source .venv/bin/activate
-            echo "uv pip env ready"
-          '';
-
-        };
+            shellHook = ''
+              if [ ! -d ".venv" ]; then
+                uv venv .venv
+              fi
+              source .venv/bin/activate
+              echo "uv pip env ready"
+            '';
+          }
+          // lib.optionalAttrs stdenv.isDarwin {
+            # nix's cc-wrapper targets aarch64-apple-darwin, but chemfiles-sys's
+            # cmake build passes --target arm64-apple-macosx; align them here.
+            CMAKE_OSX_ARCHITECTURES = "arm64";
+            MACOSX_DEPLOYMENT_TARGET = "14.0";
+          }
+        );
       }
     );
 }
