@@ -97,6 +97,11 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
         3 => [scale_parts[0], scale_parts[1], scale_parts[2]],
         n => anyhow::bail!("scale factor must be 1 or 3 numbers, got {n} in POSCAR `{label}`"),
     };
+    if scale.iter().any(|s| *s <= 0.0) {
+        anyhow::bail!(
+            "POSCAR `{label}` scale factors must be positive; negative volume scale is not supported"
+        );
+    }
 
     let mut lattice: [[f64; 3]; 3] = [[0.0; 3]; 3];
     for i in 0..3 {

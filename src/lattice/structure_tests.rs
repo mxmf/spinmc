@@ -346,6 +346,44 @@ Direct
 }
 
 #[test]
+fn error_negative_scale_not_supported() {
+    let err = parse_poscar_from_str(
+        "\
+comment
+-1.0
+  1 0 0
+  0 1 0
+  0 0 1
+  1
+Direct
+  0.5 0.5 0.5
+",
+        "test",
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("must be positive"));
+}
+
+#[test]
+fn error_zero_scale_not_supported() {
+    let err = parse_poscar_from_str(
+        "\
+comment
+1.0 0.0 1.0
+  1 0 0
+  0 1 0
+  0 0 1
+  1
+Direct
+  0.5 0.5 0.5
+",
+        "test",
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("must be positive"));
+}
+
+#[test]
 fn error_lattice_vector_too_few_columns() {
     let err = parse_poscar_from_str(
         "\

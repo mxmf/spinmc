@@ -24,6 +24,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 fn main() -> Result<()> {
     use colored::*;
     use spinmc::runner::run;
+    use std::path::Path;
 
     let subscriber = FmtSubscriber::builder()
         .with_max_level(tracing::Level::INFO)
@@ -33,7 +34,16 @@ fn main() -> Result<()> {
     let args = Args::parse();
     if let Some(Commands::Run { input }) = &args.command {
         let content = std::fs::read_to_string(input)?;
-        if let Err(e) = run(&content) {
+        let cwd = std::env::current_dir()?;
+        if let Some(parent) = Path::new(input)
+            .parent()
+            .filter(|path| !path.as_os_str().is_empty())
+        {
+            std::env::set_current_dir(parent)?;
+        }
+        let result = run(&content);
+        std::env::set_current_dir(cwd)?;
+        if let Err(e) = result {
             eprintln!("{}", format!("Error: {e}").red().bold());
             std::process::exit(1);
         }

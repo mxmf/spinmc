@@ -18,6 +18,7 @@ impl StructureConf {
         match (&self.file, &self.cell, &self.positions) {
             (Some(file), None, None) => {
                 let mut structure = lattice::load_from_file(file, self.format.clone())?;
+                structure.tolerance = self.tolerance;
                 if let Some(indices) = &self.magnetic_indices {
                     let indices: Vec<usize> = indices.iter().map(|&i| i as usize).collect();
 
