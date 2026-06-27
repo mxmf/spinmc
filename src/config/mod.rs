@@ -8,12 +8,12 @@ mod output;
 mod simulation;
 mod structure;
 
+pub use crate::lattice::Structure;
 pub use anisotropy::{Anisotropy, ParsedAnisotropy};
 pub use exchange::{Exchange, ParsedExchange};
 pub use grid::Grid;
 pub use output::Output;
 pub use simulation::Simulation;
-pub use structure::Structure;
 
 #[cfg(feature = "snapshots")]
 mod snapshots;
@@ -22,12 +22,14 @@ pub use snapshots::Snapshots;
 #[cfg(feature = "snapshots")]
 pub use snapshots::save_snapshots_to_hdf5;
 
+use crate::config::structure::StructureConf;
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
     pub grid: Grid,
     pub simulation: Simulation,
-    pub structure: Option<Structure>,
+    pub structure: Option<StructureConf>,
     pub output: Output,
     #[cfg(feature = "snapshots")]
     pub snapshots: Option<Snapshots>,
@@ -44,15 +46,21 @@ pub struct Config {
 impl Config {
     pub fn new(content: &str) -> anyhow::Result<Self> {
         let mut config: Config = toml::from_str(content)?;
+        config.validate()?;
         for exchange in &config.exchange {
-            let exchange_params =
-                exchange.parse(&config.structure, config.grid.periodic_boundary)?;
+            let exchange_params = exchange.parse(
+                &config
+                    .structure
+                    .as_ref()
+                    .map(|stru| stru.parse())
+                    .transpose()?,
+                config.grid.periodic_boundary,
+            )?;
             config.parsed_exchange.extend(exchange_params);
         }
         if let Some(anisotropy) = &config.anisotropy {
             config.parsed_anisotropy = anisotropy.parse()?;
         }
-        config.validate()?;
         Ok(config)
     }
 

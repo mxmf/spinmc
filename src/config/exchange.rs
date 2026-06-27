@@ -1,4 +1,4 @@
-use super::Structure;
+use crate::lattice::Structure;
 use serde::Serialize;
 use std::fmt;
 
