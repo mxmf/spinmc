@@ -16,7 +16,31 @@ pub struct StructureConf {
 impl StructureConf {
     pub fn parse(&self) -> anyhow::Result<Structure> {
         match (&self.file, &self.cell, &self.positions) {
-            (Some(file), None, None) => lattice::load_from_file(file, self.format.clone()),
+            (Some(file), None, None) => {
+                let mut structure = lattice::load_from_file(file, self.format.clone())?;
+                if let Some(indices) = &self.magnetic_indices {
+                    let indices: Vec<usize> = indices.iter().map(|&i| i as usize).collect();
+
+                    let mut seen = std::collections::HashSet::new();
+                    for &i in &indices {
+                        if i >= structure.positions.len() {
+                            anyhow::bail!(
+                                "magnetic_indices contains index {i} which is out of range, file has only {} atoms",
+                                structure.positions.len()
+                            );
+                        }
+                        if !seen.insert(i) {
+                            anyhow::bail!("magnetic_indices contains duplicate index {i}");
+                        }
+                    }
+
+                    structure.positions = indices.iter().map(|&i| structure.positions[i]).collect();
+                    structure.magnetic_indices = None;
+
+                    // Keep the full frame (includes non-magnetic atoms) for export use
+                }
+                Ok(structure)
+            }
             (None, Some(cell), Some(positions)) => {
                 if self.magnetic_indices.is_some() {
                     anyhow::bail!("`magnetic_indices` is only valid when loading from a `file`");
@@ -57,17 +81,24 @@ impl StructureConf {
         }
 
         if let Some(indices) = &self.magnetic_indices {
-            for &idx in indices {
-                if idx as usize >= sublattices {
-                    anyhow::bail!(
-                        "magnetic_indices contains index {idx} which is out of range, must be less than sublattices count ({sublattices})"
-                    );
-                }
-            }
             if indices.len() != sublattices {
                 anyhow::bail!(
                     "number of magnetic_indices ({}) does not match the number of sublattices ({sublattices})",
                     indices.len()
+                );
+            }
+        }
+
+        // File mode without magnetic_indices: all atoms are magnetic,
+        // so positions count must match sublattices.
+        if let (Some(_), None) = (&self.file, &self.magnetic_indices) {
+            let structure = self.parse()?;
+            if structure.positions.len() != sublattices {
+                anyhow::bail!(
+                    "number of atoms in file ({}) does not match sublattices ({sublattices}); \
+                     use `magnetic_indices` to select a subset if the file \
+                     contains non-magnetic atoms",
+                    structure.positions.len()
                 );
             }
         }
@@ -93,12 +124,28 @@ impl fmt::Display for StructureConf {
             Ok(structure) => {
                 writeln!(f, "  Cell:")?;
                 let cell = structure.cell;
-                writeln!(f, "    {}  {}  {}", cell[0][0], cell[0][1], cell[0][2])?;
-                writeln!(f, "    {}  {}  {}", cell[1][0], cell[1][1], cell[1][2])?;
-                writeln!(f, "    {}  {}  {}", cell[2][0], cell[2][1], cell[2][2])?;
+                writeln!(
+                    f,
+                    "    {:.8}  {:.8}  {:.8}",
+                    cell[0][0], cell[0][1], cell[0][2]
+                )?;
+                writeln!(
+                    f,
+                    "    {:.8}  {:.8}  {:.8}",
+                    cell[1][0], cell[1][1], cell[1][2]
+                )?;
+                writeln!(
+                    f,
+                    "    {:.8}  {:.8}  {:.8}",
+                    cell[2][0], cell[2][1], cell[2][2]
+                )?;
                 writeln!(f, "  Positions:")?;
                 for position in &structure.positions {
-                    writeln!(f, "    {} {} {}", position[0], position[1], position[2])?;
+                    writeln!(
+                        f,
+                        "    {:.8} {:.8} {:.8}",
+                        position[0], position[1], position[2]
+                    )?;
                 }
             }
             Err(e) => {
