@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Annotated
 import cappa
+import os
 from dataclasses import dataclass
 from cappa import Subcommands
 
@@ -15,7 +16,13 @@ class Run:
             from ._spinmc import run_from_py  # ty:ignore[unresolved-import]  # pyright: ignore[reportUnknownVariableType]
 
             toml_str = f.read()
-            run_from_py(toml_str)
+            cwd = Path.cwd()
+            try:
+                if self.input.parent != Path("."):
+                    os.chdir(self.input.parent)
+                run_from_py(toml_str)
+            finally:
+                os.chdir(cwd)
 
 
 @dataclass

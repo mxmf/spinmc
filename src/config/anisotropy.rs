@@ -33,7 +33,7 @@ impl Anisotropy {
             let saxis_norm =
                 (saxis[0] * saxis[0] + saxis[1] * saxis[1] + saxis[2] * saxis[2]).sqrt();
             if saxis_norm == 0.0 {
-                anyhow::bail!("Anisotropy direction vector {:?} has zero length", saxis);
+                anyhow::bail!("Anisotropy direction vector {saxis:?} has zero length");
             }
 
             let ani = ParsedAnisotropy {

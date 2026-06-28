@@ -123,6 +123,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "chemfiles"
+version = "0.10.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c2765083950cdde2b21e491edf458c59ab247d27336e9637e3cc7bead724aff"
+dependencies = [
+ "chemfiles-sys",
+]
+
+[[package]]
+name = "chemfiles-sys"
+version = "0.10.41"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00b42b868610adae00ecc6af80edc12b25353b0d125b13d30417207bf5072a78"
+dependencies = [
+ "cmake",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,6 +1060,7 @@ name = "spinmc"
 version = "0.2.1"
 dependencies = [
  "anyhow",
+ "chemfiles",
  "clap",
  "colored",
  "ctrlc",
