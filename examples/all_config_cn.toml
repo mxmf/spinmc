@@ -94,19 +94,29 @@ offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]] # 相对位置向量
 strength = 1.0                                           # 交换常数 J（eV）
 
 
-# --- 方案 2：指定目标子晶格 + 邻居阶数 ---
-# 当已知目标子晶格时，根据配位壳（邻居阶数）自动生成相互作用对
+# --- 方案 2：指定源子晶格 + 邻居阶数 ---
+# 当已知源子晶格时，根据配位壳（邻居阶数）自动生成相互作用对。
+# 不设置 to_sublattice 时，会包含该源子晶格到所有目标子晶格的相互作用。
 [[exchange]]
-to_sublattice = 0
+from_sublattice = 0
 neighbor_order = 1  # 配位壳编号（1=最近邻，2=次近邻，等等）
 strength = 1.0      # 交换常数 J（eV）
 
 [[exchange]]
-to_sublattice = 1
-neighbor_order = 0  # 配位壳编号（1=最近邻，2=次近邻，等等）
+from_sublattice = 1
+neighbor_order = 1  # 配位壳编号（1=最近邻，2=次近邻，等等）
 strength = 1.0      # 交换常数 J（eV）
 
-# --- 方案 3：最简定义 ---
+# --- 方案 3：距离范围 ---
+# 选择真实空间距离位于 [min, max] 范围内的所有自旋对，单位为 Å。
+# 该写法需要上方的 [structure] 晶体结构配置。
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+distance_range = [0.9, 1.1]
+strength = 1.0      # 交换常数 J（eV）
+
+# --- 方案 4：最简定义 ---
 # 仅指定邻居阶数与强度，自动应用于所有子晶格对
 [[exchange]]
 neighbor_order = 1

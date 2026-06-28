@@ -1,0 +1,38 @@
+[grid]
+dimensions = [50, 50, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, false]
+
+[simulation]
+initial_state = "random"
+boltzmann_constant = 1
+model = "ising"
+equilibration_steps = 10000
+measurement_steps = 100000
+algorithm = "wolff"
+pt_interval = 25
+num_threads = 10
+temperature_range = [
+  { start = 1, end = 3, step = 0.1 },
+]
+
+[output]
+savefile = "result.txt"
+energy = true
+heat_capacity = true
+magnetization = true
+susceptibility = true
+magnetization_abs = true
+susceptibility_abs = true
+
+[structure]
+cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+positions = [[0, 0, 0]]
+tolerance = 0.0001
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+distance_range = [0.9, 1.1]
+strength = 1.0

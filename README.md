@@ -11,6 +11,7 @@ SpinMC is an open-source Monte Carlo simulation package for classical spin model
 
 - **Support Interactions**:
   - Exchange coupling (isotropic)
+  - Automatic exchange neighbor generation by coordination shell or distance range
   - Single-ion anisotropy
   - [Planned] Anisotropic exchange coupling
   - [Planned] External magnetic field
@@ -94,6 +95,8 @@ to_sublattice = 0
 offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]]
 strength = 1.0
 ```
+
+Exchange interactions can also be generated from the `[structure]` section instead of listing every offset manually. Use `neighbor_order = 1` for the first coordination shell, or `distance_range = [min, max]` to include every pair whose distance falls within the given range in Å. Specify both `from_sublattice` and `to_sublattice` to target one pair, only `from_sublattice` to target all destinations from one source sublattice, or neither to apply the rule to all sublattice pairs.
 
 2. Run the simulation:
 

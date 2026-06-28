@@ -94,20 +94,30 @@ offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]] # Relative position vec
 strength = 1.0                                           # Exchange coupling constant J (eV)
 
 
-# --- Scheme 2: Target sublattice + neighbor order ---
-# Use when you know the target sublattice and want to auto-generate interaction pairs
-# based on coordination shell (neighbor order).
+# --- Scheme 2: Source sublattice + neighbor order ---
+# Use when you know the source sublattice and want to auto-generate interaction pairs
+# based on coordination shell (neighbor order). Leave to_sublattice unset to include
+# all target sublattices from this source.
 [[exchange]]
-to_sublattice = 0
+from_sublattice = 0
 neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
 strength = 1.0      # Exchange coupling constant J (eV)
 
 [[exchange]]
-to_sublattice = 1
-neighbor_order = 0  # Coordination shell (1=nearest, 2=next-nearest etc.)
+from_sublattice = 1
+neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
 strength = 1.0      # Exchange coupling constant J (eV)
 
-# --- Scheme 3: Minimal definition ---
+# --- Scheme 3: Distance range ---
+# Use when you want to include all pairs whose real-space distance is within
+# [min, max] in Å. This requires the [structure] section above.
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+distance_range = [0.9, 1.1]
+strength = 1.0      # Exchange coupling constant J (eV)
+
+# --- Scheme 4: Minimal definition ---
 # Only specify neighbor order and strength; automatically applies to all sublattice pairs.
 [[exchange]]
 neighbor_order = 1
