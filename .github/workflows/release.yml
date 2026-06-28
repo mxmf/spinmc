@@ -2,11 +2,13 @@ name: Rust Cross-Platform Release
 
 on:
   push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
+  # chemfiles-sys's CMakeLists.txt requires cmake < 3.5 compatibility;
+  # GitHub runners now ship cmake 4.x which drops it by default.
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
   build:
@@ -24,80 +26,84 @@ jobs:
             ext: ""
             archive: tar.gz
           - target: x86_64-pc-windows-msvc
-            os: windows-latest
+            os: windows-2022
             ext: .exe
             archive: zip
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust target
-      run: rustup target add ${{ matrix.target }}
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
 
-    - name: Install musl tools (for musl target)
-      if: matrix.target == 'x86_64-unknown-linux-musl'
-      run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Install cross (for musl target)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        uses: taiki-e/install-action@cross
 
-    - name: Build release binary
-      run: cargo build --release --target ${{ matrix.target }} --features snapshots
+      - name: Build musl release binary with cross
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        env:
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C relocation-model=static"
+        run: cross build --release --target ${{ matrix.target }} --features snapshots,mimalloc
 
-    - name: Upload binary artifact (no compression)
-      uses: actions/upload-artifact@v4
-      with:
-        name: spinmc-${{ matrix.target }}
-        path: target/${{ matrix.target }}/release/spinmc${{ matrix.ext }}
+      - name: Build release binary
+        if: matrix.target != 'x86_64-unknown-linux-musl'
+        run: cargo build --release --target ${{ matrix.target }} --features snapshots
+
+      - name: Upload binary artifact (no compression)
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinmc-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/spinmc${{ matrix.ext }}
 
   release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
+      - name: Package binaries
+        shell: bash
+        run: |
+          mkdir -p release
+          for dir in artifacts/*; do
+            target=$(basename "$dir")
+            if [[ "$target" == *"windows"* ]]; then
+              ext=".exe"
+              archive="zip"
+            else
+              ext=""
+              archive="tar.gz"
+            fi
 
-    - name: Package binaries
-      shell: bash
-      run: |
-        mkdir -p release
-        for dir in artifacts/*; do
-          target=$(basename "$dir")
-          if [[ "$target" == *"windows"* ]]; then
-            ext=".exe"
-            archive="zip"
-          else
-            ext=""
-            archive="tar.gz"
-          fi
-      
-          cp "$dir/spinmc$ext" "release/spinmc$ext"
+            cp "$dir/spinmc$ext" "release/spinmc$ext"
 
-          chmod +x "release/spinmc$ext"
-      
-          if [[ "$archive" == "zip" ]]; then
-            (cd release && zip "../spinmc-$target.zip" "spinmc$ext")
-          else
-            (cd release && tar czf "../spinmc-$target.tar.gz" "spinmc$ext")
-          fi
-      
-          rm "release/spinmc$ext"
-        done
-        rmdir release
+            chmod +x "release/spinmc$ext"
 
-    - name: Create GitHub Release
-      id: create_release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        name: Release ${{ github.ref_name }}
-        files: |
-          spinmc-*.tar.gz
-          spinmc-*.zip
+            if [[ "$archive" == "zip" ]]; then
+              (cd release && zip "../spinmc-$target.zip" "spinmc$ext")
+            else
+              (cd release && tar czf "../spinmc-$target.tar.gz" "spinmc$ext")
+            fi
 
+            rm "release/spinmc$ext"
+          done
+          rmdir release
 
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ github.ref_name }}
+          files: |
+            spinmc-*.tar.gz
+            spinmc-*.zip

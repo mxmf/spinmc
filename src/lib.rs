@@ -6,6 +6,10 @@ pub mod runner;
 pub mod spin;
 pub mod utils;
 
+#[cfg(feature = "mimalloc")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[cfg(feature = "python-extension")]
 use pyo3::{exceptions::PyValueError, prelude::*};
 #[cfg(feature = "python-extension")]

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use mimalloc::MiMalloc;
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
@@ -19,8 +18,6 @@ enum Commands {
         input: String,
     },
 }
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 fn main() -> Result<()> {
     use colored::*;
     use spinmc::runner::run;
