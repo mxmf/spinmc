@@ -72,22 +72,22 @@ impl StructureConf {
     }
 
     pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
-        if let (None, Some(_), Some(positions)) = (&self.file, &self.cell, &self.positions) {
-            if positions.len() != sublattices {
-                anyhow::bail!(
-                    "number of provided positions ({}) does not match the number of sublattices ({sublattices})",
-                    positions.len()
-                );
-            }
+        if let (None, Some(_), Some(positions)) = (&self.file, &self.cell, &self.positions)
+            && positions.len() != sublattices
+        {
+            anyhow::bail!(
+                "number of provided positions ({}) does not match the number of sublattices ({sublattices})",
+                positions.len()
+            );
         }
 
-        if let Some(indices) = &self.magnetic_indices {
-            if indices.len() != sublattices {
-                anyhow::bail!(
-                    "number of magnetic_indices ({}) does not match the number of sublattices ({sublattices})",
-                    indices.len()
-                );
-            }
+        if let Some(indices) = &self.magnetic_indices
+            && indices.len() != sublattices
+        {
+            anyhow::bail!(
+                "number of magnetic_indices ({}) does not match the number of sublattices ({sublattices})",
+                indices.len()
+            );
         }
 
         // File mode without magnetic_indices: all atoms are magnetic,
