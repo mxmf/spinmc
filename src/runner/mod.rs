@@ -4,8 +4,8 @@ use indicatif::{
 use rand::Rng;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
-use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufWriter, IsTerminal, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -97,7 +97,7 @@ fn auto_progress_log_interval(total_steps: usize) -> usize {
 }
 
 fn should_log_progress(completed: usize, total: usize, interval: usize) -> bool {
-    interval > 0 && (completed == total || completed % interval == 0)
+    interval > 0 && (completed == total || completed.is_multiple_of(interval))
 }
 
 fn maybe_hide_progress_bar(pb: &ProgressBar, progress: ProgressConfig) {
@@ -318,7 +318,7 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
                     let s = start + offset;
                     mc.step(grid);
                     if s >= equil_steps {
-                        let do_meas = stats_interval == 0 || s % stats_interval == 0;
+                        let do_meas = stats_interval == 0 || s.is_multiple_of(stats_interval);
                         if do_meas {
                             stat.record(grid);
                         }
