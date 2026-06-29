@@ -96,7 +96,19 @@ offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]]
 strength = 1.0
 ```
 
-Exchange interactions can also be generated from the `[structure]` section instead of listing every offset manually. Use `neighbor_order = 1` for the first coordination shell, or `distance_range = [min, max]` to include every pair whose distance falls within the given range in Å. Specify both `from_sublattice` and `to_sublattice` to target one pair, only `from_sublattice` to target all destinations from one source sublattice, or neither to apply the rule to all sublattice pairs.
+Exchange interactions can also be generated from the `[structure]` section instead of listing every offset manually. The structure can be written directly with `cell` and `positions`, or loaded from an external structure file:
+
+```toml
+[structure]
+file = "POSCAR"
+# format = "poscar"          # Optional; POSCAR/CONTCAR and .vasp files are detected automatically.
+# magnetic_indices = [0, 2]  # Optional; select magnetic atoms when the file also contains non-magnetic atoms.
+tolerance = 0.0001
+```
+
+Use `neighbor_order = 1` for the first coordination shell, or `distance_range = [min, max]` to include every pair whose distance falls within the given range in Å. Specify both `from_sublattice` and `to_sublattice` to target one pair, only `from_sublattice` to target all destinations from one source sublattice, or neither to apply the rule to all sublattice pairs.
+
+See `examples/heisenberg_2d_cri3_poscar` for a CrI3 monolayer example loaded from a POSCAR file.
 
 2. Run the simulation:
 

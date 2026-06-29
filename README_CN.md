@@ -96,7 +96,19 @@ offsets = [[0, -1, 0], [0, 1, 0], [-1, 0, 0], [1, 0, 0]]
 strength = 1.0
 ```
 
-交换作用也可以通过 `[structure]` 中的晶体结构自动生成，而不必手动列出每一个 offset。使用 `neighbor_order = 1` 表示第一配位壳，或使用 `distance_range = [min, max]` 选择距离落在该范围内的所有自旋对，距离单位为 Å。可以同时指定 `from_sublattice` 和 `to_sublattice` 来限定一对子晶格；只指定 `from_sublattice` 时会匹配该源子晶格到所有目标子晶格；两者都不指定时会应用到所有子晶格对。
+交换作用也可以通过 `[structure]` 中的晶体结构自动生成，而不必手动列出每一个 offset。晶体结构既可以用 `cell` 和 `positions` 直接写在配置文件里，也可以从外部结构文件读取：
+
+```toml
+[structure]
+file = "POSCAR"
+# format = "poscar"          # 可选；POSCAR/CONTCAR 和 .vasp 文件会自动识别。
+# magnetic_indices = [0, 2]  # 可选；当结构文件中也包含非磁性原子时，用它选择磁性原子。
+tolerance = 0.0001
+```
+
+使用 `neighbor_order = 1` 表示第一配位壳，或使用 `distance_range = [min, max]` 选择距离落在该范围内的所有自旋对，距离单位为 Å。可以同时指定 `from_sublattice` 和 `to_sublattice` 来限定一对子晶格；只指定 `from_sublattice` 时会匹配该源子晶格到所有目标子晶格；两者都不指定时会应用到所有子晶格对。
+
+可以参考 `examples/heisenberg_2d_cri3_poscar` 中从 POSCAR 文件读取 CrI3 单层结构的示例。
 
 2. 运行模拟
 

@@ -81,6 +81,11 @@ cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]] # Unit cell vectors (Å)
 positions = [[0, 0, 0]]                  # Atomic positions (fractional coordinates)
 tolerance = 0.0001                       # Distance comparison tolerance (Å)
 
+# Alternatively, load structure from an external file:
+# file = "POSCAR"                         # POSCAR/CONTCAR and .vasp files are detected automatically
+# format = "poscar"                       # Optional; force a structure format when needed
+# magnetic_indices = [0, 2]               # Optional; select magnetic atoms from a larger structure
+
 # =======================
 # Exchange interaction definitions
 # =======================
