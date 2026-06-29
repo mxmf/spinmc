@@ -3,4 +3,4 @@ mod neighbors;
 mod structure;
 pub use grid::Grid;
 pub use neighbors::Atoms;
-pub use structure::{load_from_file, Structure};
+pub use structure::{Structure, load_from_file};

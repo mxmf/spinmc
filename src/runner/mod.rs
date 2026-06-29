@@ -4,8 +4,8 @@ use indicatif::{
 use rand::Rng;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
-use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufWriter, IsTerminal, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
