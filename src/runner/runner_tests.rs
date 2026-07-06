@@ -34,6 +34,38 @@ fn non_comment_lines(content: &str) -> Vec<&str> {
         .collect()
 }
 
+fn progress_config_toml(extra_output: &str) -> String {
+    format!(
+        r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 10
+measurement_steps = 10
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0], [0, 1, 0]]
+strength = 1.0
+
+[output]
+energy = true
+group = [[0]]
+{extra_output}
+"#
+    )
+}
+
 #[test]
 fn auto_progress_log_interval_normal() {
     assert_eq!(auto_progress_log_interval(100), 5);
@@ -71,37 +103,34 @@ fn should_log_progress_interval_zero_never() {
 
 #[test]
 fn progress_config_uses_explicit_log_interval() {
-    let toml = r#"
-[simulation]
-initial_state = "z"
-model = "ising"
-equilibration_steps = 10
-measurement_steps = 10
-temperatures = [1.0]
-num_threads = 1
-algorithm = "metropolis"
-
-[grid]
-dimensions = [2, 2, 1]
-sublattices = 1
-spin_magnitudes = [1.0]
-periodic_boundary = [true, true, true]
-
-[[exchange]]
-from_sublattice = 0
-to_sublattice = 0
-offsets = [[1, 0, 0], [0, 1, 0]]
-strength = 1.0
-
-[output]
-energy = true
+    let toml = progress_config_toml(
+        r#"
+progress_bar = false
 progress_log_interval = 7
-group = [[0]]
-"#;
-    let config = Config::new(toml).unwrap();
-    let progress = progress_config(&config, 20);
+"#,
+    );
+    let config = Config::new(&toml).unwrap();
+    let progress = progress_config_with_terminal(&config, 20, true);
     assert!(!progress.use_bars);
     assert_eq!(progress.log_interval, 7);
+}
+
+#[test]
+fn progress_config_tty_uses_progress_bar_without_log_interval() {
+    let toml = progress_config_toml("");
+    let config = Config::new(&toml).unwrap();
+    let progress = progress_config_with_terminal(&config, 100, true);
+    assert!(progress.use_bars);
+    assert_eq!(progress.log_interval, 0);
+}
+
+#[test]
+fn progress_config_non_tty_uses_auto_log_interval() {
+    let toml = progress_config_toml("");
+    let config = Config::new(&toml).unwrap();
+    let progress = progress_config_with_terminal(&config, 100, false);
+    assert!(!progress.use_bars);
+    assert_eq!(progress.log_interval, 5);
 }
 
 #[test]

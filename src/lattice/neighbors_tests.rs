@@ -1,4 +1,5 @@
 use super::Atoms;
+use super::Vector3Ext;
 
 fn direct_to_cart(cell: [[f64; 3]; 3], direct: [f64; 3]) -> [f64; 3] {
     [
@@ -6,6 +7,39 @@ fn direct_to_cart(cell: [[f64; 3]; 3], direct: [f64; 3]) -> [f64; 3] {
         direct[0] * cell[0][1] + direct[1] * cell[1][1] + direct[2] * cell[2][1],
         direct[0] * cell[0][2] + direct[1] * cell[1][2] + direct[2] * cell[2][2],
     ]
+}
+
+// --- Vector3Ext ---
+
+#[test]
+fn vector3ext_scale() {
+    let v = [1.0, 2.0, 3.0];
+    assert_eq!(v.scale(2.0), [2.0, 4.0, 6.0]);
+    assert_eq!(v.scale(0.0), [0.0, 0.0, 0.0]);
+}
+
+#[test]
+fn vector3ext_dot() {
+    let a = [1.0, 2.0, 3.0];
+    let b = [4.0, 5.0, 6.0];
+    assert_eq!(a.dot(&b), 32.0);
+    assert_eq!(a.dot(&[0.0, 1.0, 0.0]), 2.0);
+}
+
+#[test]
+fn vector3ext_norm() {
+    assert!(([3.0, 4.0, 0.0].norm() - 5.0).abs() < 1e-10);
+    assert_eq!([0.0, 0.0, 0.0].norm(), 0.0);
+}
+
+#[test]
+fn vector3ext_add() {
+    assert_eq!([1.0, 2.0, 3.0].add(&[4.0, 5.0, 6.0]), [5.0, 7.0, 9.0]);
+}
+
+#[test]
+fn vector3ext_sub() {
+    assert_eq!([5.0, 7.0, 9.0].sub(&[4.0, 5.0, 6.0]), [1.0, 2.0, 3.0]);
 }
 
 #[test]

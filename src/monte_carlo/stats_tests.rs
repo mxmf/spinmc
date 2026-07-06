@@ -1,5 +1,55 @@
 use super::*;
+use crate::config::Config;
+use crate::lattice::Grid;
 use crate::spin::IsingSpin;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
+
+fn ising_grid_config() -> Config {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 10
+measurement_steps = 10
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0], [0, 1, 0]]
+strength = 1.0
+
+[output]
+energy = true
+group = [[0]]
+"#;
+    Config::new(toml).unwrap()
+}
+
+fn energy_stats_config(group_num: usize) -> StatsConfig {
+    StatsConfig {
+        energy: true,
+        heat_capacity: false,
+        magnetization: false,
+        susceptibility: false,
+        magnetization_abs: false,
+        susceptibility_abs: false,
+        group_magnetization: false,
+        group_susceptibility: false,
+        group_magnetization_abs: false,
+        group_susceptibility_abs: false,
+        group_num,
+    }
+}
 
 // --- maybe() ---
 
@@ -212,4 +262,50 @@ fn stat_result_display_contains_temperature() {
     let s = format!("{r}");
     assert!(s.contains("300"));
     assert!(s.contains("-42"));
+}
+
+// --- Stats::new() with Config ---
+
+#[test]
+fn stats_new_with_config() {
+    let config = ising_grid_config();
+    let stats_config = energy_stats_config(1);
+    let stats: Stats<IsingSpin> = Stats::new(&config, 2.0, stats_config);
+    assert_eq!(stats.size, 4.0);
+    assert_eq!(stats.steps, 0);
+    assert_eq!(stats.t, 2.0);
+    assert_eq!(stats.partial_size, vec![4.0]);
+}
+
+// --- Stats::record() with Grid ---
+
+#[test]
+fn stats_record_energy() {
+    let config = ising_grid_config();
+    let stats_config = energy_stats_config(1);
+    let mut stats: Stats<IsingSpin> = Stats::new(&config, 1.0, stats_config);
+    let rng = SmallRng::seed_from_u64(42);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let expected_energy = grid.total_energy();
+    stats.record(&grid);
+    assert_eq!(stats.steps, 1);
+    assert!((stats.energy_sum - expected_energy).abs() < 1e-10);
+    assert_eq!(stats.energy2_sum, 0.0);
+}
+
+#[test]
+fn stats_record_multiple_steps() {
+    let config = ising_grid_config();
+    let stats_config = energy_stats_config(1);
+    let mut stats: Stats<IsingSpin> = Stats::new(&config, 1.0, stats_config);
+    let rng = SmallRng::seed_from_u64(42);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let expected_energy = grid.total_energy();
+    stats.record(&grid);
+    stats.record(&grid);
+    stats.record(&grid);
+    assert_eq!(stats.steps, 3);
+    assert!((stats.energy_sum - 3.0 * expected_energy).abs() < 1e-10);
+    let result = stats.result();
+    assert!((result.energy.unwrap() - expected_energy / grid.size as f64).abs() < 1e-10);
 }
