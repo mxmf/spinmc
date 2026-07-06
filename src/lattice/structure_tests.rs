@@ -56,24 +56,16 @@ fn explicit_format_takes_precedence() {
 
 #[test]
 fn load_from_file_with_explicit_xyz_format() {
-    let path =
-        std::env::temp_dir().join(format!("spinmc-structure-xyz-{}.xyz", std::process::id()));
-    fs::write(
-        &path,
-        "\
-2
-comment
-H 0.0 0.0 0.0
-He 1.0 2.0 3.0
-",
-    )
-    .unwrap();
+    let source = std::fs::read_to_string("examples/heisenberg_2d_cri3_poscar/POSCAR").unwrap();
+    let source = parse_poscar_from_str(&source, "examples/heisenberg_2d_cri3_poscar/POSCAR")
+        .expect("failed to parse source POSCAR");
+    let path = std::env::temp_dir().join(format!("spinmc-cri3-poscar-{}.xyz", std::process::id()));
+    fs::write(&path, extended_xyz_from_structure(&source)).unwrap();
 
     let structure = load_from_file(path.to_str().unwrap(), Some("XYZ".into())).unwrap();
 
-    assert_eq!(structure.positions.len(), 2);
-    assert_eq!(structure.positions[0], [0.0, 0.0, 0.0]);
-    assert_eq!(structure.positions[1], [1.0, 2.0, 3.0]);
+    assert_positions_close(&structure.positions, &source.positions);
+    assert_cell_close(structure.cell, source.cell);
     assert!(structure.frame.is_some());
 
     fs::remove_file(path).unwrap();
@@ -81,26 +73,65 @@ He 1.0 2.0 3.0
 
 #[test]
 fn load_from_file_infers_xyz_format_from_extension() {
+    let source = std::fs::read_to_string("examples/heisenberg_2d_cri3_poscar/POSCAR").unwrap();
+    let source = parse_poscar_from_str(&source, "examples/heisenberg_2d_cri3_poscar/POSCAR")
+        .expect("failed to parse source POSCAR");
     let path = std::env::temp_dir().join(format!(
-        "spinmc-structure-xyz-infer-{}.xyz",
+        "spinmc-cri3-poscar-infer-{}.xyz",
         std::process::id()
     ));
-    fs::write(
-        &path,
-        "\
-1
-comment
-H 4.0 5.0 6.0
-",
-    )
-    .unwrap();
+    fs::write(&path, extended_xyz_from_structure(&source)).unwrap();
 
     let structure = load_from_file(path.to_str().unwrap(), None).unwrap();
 
-    assert_eq!(structure.positions, vec![[4.0, 5.0, 6.0]]);
+    assert_positions_close(&structure.positions, &source.positions);
+    assert_cell_close(structure.cell, source.cell);
     assert!(structure.frame.is_some());
 
     fs::remove_file(path).unwrap();
+}
+
+fn extended_xyz_from_structure(structure: &super::Structure) -> String {
+    let cell = structure.cell;
+    let mut xyz = format!(
+        "{}\nLattice=\"{} {} {} {} {} {} {} {} {}\" Properties=species:S:1:pos:R:3\n",
+        structure.positions.len(),
+        cell[0][0],
+        cell[1][0],
+        cell[2][0],
+        cell[0][1],
+        cell[1][1],
+        cell[2][1],
+        cell[0][2],
+        cell[1][2],
+        cell[2][2],
+    );
+    for position in &structure.positions {
+        xyz.push_str(&format!(
+            "X {:.16} {:.16} {:.16}\n",
+            position[0], position[1], position[2]
+        ));
+    }
+    xyz
+}
+
+fn assert_positions_close(left: &[[f64; 3]], right: &[[f64; 3]]) {
+    assert_eq!(left.len(), right.len());
+    for (left, right) in left.iter().zip(right) {
+        assert_vector_close(*left, *right);
+    }
+}
+
+fn assert_cell_close(left: [[f64; 3]; 3], right: [[f64; 3]; 3]) {
+    for (left, right) in left.iter().zip(right.iter()) {
+        assert_vector_close(*left, *right);
+    }
+}
+
+fn assert_vector_close(left: [f64; 3], right: [f64; 3]) {
+    for (left, right) in left.iter().zip(right) {
+        assert!((left - right).abs() < 1e-10, "{left} != {right}");
+    }
 }
 
 // ─── parse_poscar_from_str: happy paths ────────────────────────────

@@ -1,5 +1,5 @@
 use anyhow::Context;
-use chemfiles;
+use chemfiles::{self, CellShape};
 use std::io::Read;
 
 #[derive(Debug)]
@@ -66,9 +66,17 @@ pub fn load_from_file(stru_file: &str, format: Option<String>) -> anyhow::Result
         .read(&mut frame)
         .with_context(|| format!("failed to read structure from structure file `{stru_file}`"))?;
 
+    let cell = frame.cell();
+    let cell = match cell.shape() {
+        CellShape::Infinite => {
+            anyhow::bail!("structure file `{stru_file}` does not contain a finite unit cell")
+        }
+        CellShape::Orthorhombic | CellShape::Triclinic => cell.matrix(),
+    };
+
     Ok(Structure {
         positions: frame.positions().to_vec(),
-        cell: frame.cell().matrix(),
+        cell,
         tolerance: None,
         magnetic_indices: None,
         frame: Some(frame),
