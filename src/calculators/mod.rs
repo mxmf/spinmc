@@ -186,3 +186,7 @@ impl Hamiltonian {
         anisotropy_energy(spin, calc_input)
     }
 }
+
+#[cfg(test)]
+#[path = "calculators_tests.rs"]
+mod tests;
