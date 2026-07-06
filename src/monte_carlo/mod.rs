@@ -40,3 +40,7 @@ impl<R: rand::Rng> AnyMC<R> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "mc_mod_tests.rs"]
+mod tests;

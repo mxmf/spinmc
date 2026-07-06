@@ -25,3 +25,7 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Metropolis<R> {
         grid.size
     }
 }
+
+#[cfg(test)]
+#[path = "metropolis_tests.rs"]
+mod tests;

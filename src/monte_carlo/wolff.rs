@@ -83,3 +83,7 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
         cluster.len()
     }
 }
+
+#[cfg(test)]
+#[path = "wolff_tests.rs"]
+mod tests;
