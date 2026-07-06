@@ -58,11 +58,7 @@ impl SpinState for XYSpin {
         self.x * self.x + self.y * self.y
     }
 
-    fn is_aligned(&self, _axis: &Self) -> bool {
-        true
-    }
-
-    fn flip(&mut self, axis: &Self) -> Self {
+    fn flip(&self, axis: &Self) -> Self {
         *self - *axis * 2. * (self.dot(axis))
     }
 
@@ -149,3 +145,7 @@ impl Div<f64> for &XYSpin {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "xy_tests.rs"]
+mod tests;

@@ -81,7 +81,12 @@ pub trait SpinState:
         ham.compute_anisotropy(self, calc_input) - ham.compute_anisotropy(old_spin, calc_input)
     }
 
-    fn is_aligned(&self, axis: &Self) -> bool;
+    /// In Wolff cluster building, whether two spins can be on the same
+    /// side of a reflection plane. Always true for continuous models
+    /// (XY, Heisenberg); for Ising, same sign.
+    fn same_side(&self, _other: &Self) -> bool {
+        true
+    }
 
     fn wolff_probability(
         &self,
@@ -95,7 +100,11 @@ pub trait SpinState:
         1.0 - (-2.0 * beta * j * (self.dot(axis)) * (other.dot(axis))).exp()
     }
 
-    fn flip(&mut self, axis: &Self) -> Self;
+    fn flip(&self, axis: &Self) -> Self;
 
     fn to_array(&self) -> [f64; 3];
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;

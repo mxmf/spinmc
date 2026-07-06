@@ -70,11 +70,7 @@ impl SpinState for HeisenbergSpin {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    fn is_aligned(&self, _axis: &Self) -> bool {
-        true
-    }
-
-    fn flip(&mut self, axis: &Self) -> Self {
+    fn flip(&self, axis: &Self) -> Self {
         *self - *axis * 2. * (self.dot(axis))
     }
 
@@ -169,3 +165,7 @@ impl Div<f64> for &HeisenbergSpin {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "heisenberg_tests.rs"]
+mod tests;
