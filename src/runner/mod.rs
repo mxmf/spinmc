@@ -36,10 +36,11 @@ pub fn run(content: &str) -> anyhow::Result<()> {
         group_num: run_config.output.group.len(),
     };
 
-    ThreadPoolBuilder::new()
+    // Rayon allows the global pool to be initialized only once per process.
+    // Reuse the existing pool when tests or callers invoke `run` repeatedly.
+    let _ = ThreadPoolBuilder::new()
         .num_threads(run_config.simulation.num_threads)
-        .build_global()
-        .unwrap();
+        .build_global();
 
     let results = match run_config.simulation.model {
         config::Model::Ising => run_simulations::<IsingSpin>(&run_config, &stats_config),
