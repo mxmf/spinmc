@@ -55,6 +55,14 @@ impl Simulation {
             (true, false) => {
                 for tem_range in &self.temperature_range {
                     let (start, end, step) = (tem_range.start, tem_range.end, tem_range.step);
+                    if step <= 0.0 {
+                        anyhow::bail!("temperature_range step ({step}) must be positive");
+                    }
+                    if start > end {
+                        anyhow::bail!(
+                            "temperature_range start ({start}) must be less than or equal to end ({end})"
+                        );
+                    }
                     let mut t = start;
                     while t <= end + 1e-8 {
                         self.temperatures.push(t);
@@ -99,3 +107,7 @@ impl fmt::Display for Simulation {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "simulation_tests.rs"]
+mod tests;

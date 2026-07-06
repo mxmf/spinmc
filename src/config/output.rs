@@ -132,3 +132,7 @@ impl fmt::Display for Output {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "output_tests.rs"]
+mod tests;
