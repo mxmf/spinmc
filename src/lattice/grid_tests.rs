@@ -1,5 +1,6 @@
 use super::*;
 use crate::calculators::{CalcInput, Hamiltonian, HamiltonianConfig};
+use crate::config::Config;
 use crate::spin::{IsingSpin, SpinState};
 use rand::SeedableRng;
 use rand::rngs::SmallRng;
@@ -430,4 +431,389 @@ fn grid_rng_accessible() {
     };
     // Just verify rng is still accessible after moving into Grid
     let _ = grid.rng;
+}
+
+// --- Grid::new() with Config ---
+
+fn minimal_config(toml_extra: &str) -> Config {
+    let base = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+group = [[0]]
+"#;
+    let full = format!("{base}\n{toml_extra}");
+    Config::new(&full).unwrap()
+}
+
+#[test]
+fn grid_new_basic() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.size, 4);
+    assert_eq!(grid.dim, [2, 2, 1]);
+    assert_eq!(grid.num_sublattices, 1);
+    assert_eq!(grid.spins.len(), 4);
+}
+
+#[test]
+fn grid_new_exchange_neighbors_built() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    // Every site has exactly one +x neighbor; x=1 wraps to x=0 because PBC is enabled.
+    for ci in &grid.calc_inputs {
+        let neighbors = ci.exchange_neighbors.as_ref().unwrap();
+        assert_eq!(neighbors.len(), 1);
+        assert_eq!(ci.exchange_neighbor_index.len(), 1);
+        assert_eq!(ci.exchanges, vec![1.0]);
+    }
+}
+
+#[test]
+fn grid_new_can_compute_energy() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let e = grid.total_energy();
+    // Four sites each contribute -J*s_i*s_j/2 = -0.5 for the +x bond.
+    assert!((e + 2.0).abs() < 1e-10, "got {e}");
+}
+
+#[test]
+fn grid_new_group_index() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 2
+spin_magnitudes = [1.0, 1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 1
+offsets = [[0, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+group = [[0, 1]]
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.num_sublattices, 2);
+    assert_eq!(grid.size, 8);
+    // group_index len = number of groups
+    assert_eq!(grid.group_index.len(), 1);
+    // One group containing both sublattices → 8 indices
+    assert_eq!(grid.group_index[0].len(), 8);
+}
+
+#[test]
+fn grid_new_initial_state_random() {
+    let toml = r#"
+[simulation]
+initial_state = "random"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [10, 1, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    // Random Ising spins should all be ±1
+    for s in &grid.spins {
+        assert!((s.to_array()[2].abs() - 1.0).abs() < 1e-10);
+    }
+}
+
+#[test]
+fn grid_new_initial_state_xy() {
+    let toml = r#"
+[simulation]
+initial_state = "x"
+model = "xy"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 1, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<crate::spin::XYSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.spins.len(), 2);
+    for spin in &grid.spins {
+        assert_eq!(spin.to_array(), [1.0, 0.0, 0.0]);
+    }
+}
+
+#[test]
+fn grid_new_initial_state_heisenberg() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "heisenberg"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 1, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<crate::spin::HeisenbergSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.spins.len(), 2);
+    for spin in &grid.spins {
+        assert_eq!(spin.to_array(), [0.0, 0.0, 1.0]);
+    }
+}
+
+#[test]
+fn grid_new_non_periodic_boundary_excludes_oob_neighbors() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 1, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [false, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.calc_inputs[0].exchange_neighbor_index, vec![1]);
+    assert!(grid.calc_inputs[1].exchange_neighbor_index.is_empty());
+}
+
+#[test]
+fn grid_new_with_anisotropy() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[anisotropy]
+axis = [[0.0, 0.0, 1.0]]
+strength = [2.0]
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    // All calc_inputs should have anisotropy set
+    for ci in &grid.calc_inputs {
+        assert!((ci.anisotropy.0 - 2.0).abs() < 1e-10);
+        assert_eq!(ci.anisotropy.1, [0.0, 0.0, 1.0]);
+    }
+}
+
+#[test]
+fn grid_new_multi_sublattice() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [1, 1, 1]
+sublattices = 3
+spin_magnitudes = [1.0, 2.0, 3.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[0, 0, 0]]
+strength = 0.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.size, 3);
+    assert_eq!(grid.num_sublattices, 3);
+    // Magnitudes should match
+    assert!((grid.calc_inputs[0].magnitude - 1.0).abs() < 1e-10);
+    assert!((grid.calc_inputs[1].magnitude - 2.0).abs() < 1e-10);
+    assert!((grid.calc_inputs[2].magnitude - 3.0).abs() < 1e-10);
+    assert_eq!(grid.spins[0].to_array(), [0.0, 0.0, 1.0]);
+    assert_eq!(grid.spins[1].to_array(), [0.0, 0.0, 2.0]);
+    assert_eq!(grid.spins[2].to_array(), [0.0, 0.0, 3.0]);
+}
+
+#[test]
+fn grid_new_partial_spin_vector_works() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    // With 1 group of 1 sublattice, partial_spin_vector should be accessible
+    let v = grid.partial_spin_vector(0);
+    // All spins are +1, 4 sites → total = 4.0 in z
+    assert!((v.to_array()[2] - 4.0).abs() < 1e-10);
+}
+
+#[test]
+fn grid_new_total_spin_vector_works() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let total = grid.total_spin_vector();
+    assert!((total.to_array()[2] - 4.0).abs() < 1e-10);
+}
+
+#[test]
+fn grid_new_3d() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [3, 2, 2]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.size, 12);
+    assert_eq!(grid.dim, [3, 2, 2]);
 }
