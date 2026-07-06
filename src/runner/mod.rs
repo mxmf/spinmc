@@ -396,3 +396,7 @@ fn run_simulations<S: SpinState>(
         Ok(run_independent(config, stats, algos, grids))
     }
 }
+
+#[cfg(test)]
+#[path = "runner_tests.rs"]
+mod tests;
