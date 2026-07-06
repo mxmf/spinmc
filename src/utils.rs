@@ -5,3 +5,7 @@ pub fn fmt_fixed_width(num: f64, width: usize) -> String {
         format!("{num:<width$.6}")
     }
 }
+
+#[cfg(test)]
+#[path = "utils_tests.rs"]
+mod tests;

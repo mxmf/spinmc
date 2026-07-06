@@ -70,3 +70,7 @@ pub fn save_snapshots_to_hdf5<S: SpinState + hdf5_metno::H5Type>(
         .create("snapshots/steps")?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "snapshots_tests.rs"]
+mod tests;

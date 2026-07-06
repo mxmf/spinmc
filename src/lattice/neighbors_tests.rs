@@ -1,4 +1,5 @@
 use super::Atoms;
+use super::Vector3Ext;
 
 fn direct_to_cart(cell: [[f64; 3]; 3], direct: [f64; 3]) -> [f64; 3] {
     [
@@ -6,6 +7,177 @@ fn direct_to_cart(cell: [[f64; 3]; 3], direct: [f64; 3]) -> [f64; 3] {
         direct[0] * cell[0][1] + direct[1] * cell[1][1] + direct[2] * cell[2][1],
         direct[0] * cell[0][2] + direct[1] * cell[1][2] + direct[2] * cell[2][2],
     ]
+}
+
+// --- Vector3Ext ---
+
+#[test]
+fn vector3ext_scale() {
+    let v = [1.0, 2.0, 3.0];
+    assert_eq!(v.scale(2.0), [2.0, 4.0, 6.0]);
+    assert_eq!(v.scale(0.0), [0.0, 0.0, 0.0]);
+}
+
+#[test]
+fn vector3ext_dot() {
+    let a = [1.0, 2.0, 3.0];
+    let b = [4.0, 5.0, 6.0];
+    assert_eq!(a.dot(&b), 32.0);
+    assert_eq!(a.dot(&[0.0, 1.0, 0.0]), 2.0);
+}
+
+#[test]
+fn vector3ext_norm() {
+    assert!(([3.0, 4.0, 0.0].norm() - 5.0).abs() < 1e-10);
+    assert_eq!([0.0, 0.0, 0.0].norm(), 0.0);
+}
+
+#[test]
+fn vector3ext_add() {
+    assert_eq!([1.0, 2.0, 3.0].add(&[4.0, 5.0, 6.0]), [5.0, 7.0, 9.0]);
+}
+
+#[test]
+fn vector3ext_sub() {
+    assert_eq!([5.0, 7.0, 9.0].sub(&[4.0, 5.0, 6.0]), [1.0, 2.0, 3.0]);
+}
+
+// --- calc_distance variants ---
+
+fn two_site_unit_atoms() -> Atoms {
+    Atoms {
+        cell: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        positions: vec![[0., 0., 0.0], [0.5, 0., 0.]],
+        pbc: [true, true, true],
+        tolerance: 0.0001,
+    }
+}
+
+#[test]
+fn test_calc_distance_from_to_max_n() {
+    let atoms = two_site_unit_atoms();
+    let distances = atoms.calc_distance_from_to(0, 1, 1);
+    assert_eq!(distances.len(), 27);
+    let nearest: Vec<_> = distances
+        .iter()
+        .filter(|distance| (distance.distance - 0.5).abs() < 1e-10)
+        .map(|distance| distance.neighbor.offset)
+        .collect();
+    assert_eq!(nearest, vec![[-1, 0, 0], [0, 0, 0]]);
+}
+
+#[test]
+fn test_calc_distance_from_max_n() {
+    let atoms = two_site_unit_atoms();
+    let distances = atoms.calc_distance_from(0, 1);
+    assert_eq!(distances.len(), 53);
+    assert!(distances.iter().all(|distance| distance.neighbor.from == 0));
+    assert_eq!(
+        distances
+            .iter()
+            .filter(|distance| distance.neighbor.to == 0)
+            .count(),
+        26
+    );
+    assert_eq!(
+        distances
+            .iter()
+            .filter(|distance| distance.neighbor.to == 1)
+            .count(),
+        27
+    );
+}
+
+#[test]
+fn test_calc_distance_from_to_self_excluded() {
+    let atoms = Atoms {
+        cell: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        positions: vec![[0., 0., 0.0]],
+        pbc: [true, true, true],
+        tolerance: 0.0001,
+    };
+    let distances = atoms.calc_distance_from_to(0, 0, 2);
+    // Should not include the zero-distance self pair
+    assert_eq!(distances.len(), 124);
+    assert!(distances.iter().all(|d| d.distance > 0.0));
+    assert!(
+        distances
+            .iter()
+            .all(|distance| distance.neighbor.offset != [0, 0, 0])
+    );
+}
+
+// --- cell_offset ---
+
+#[test]
+fn test_cell_offset() {
+    let atoms = Atoms {
+        cell: [[1.0, 0.0, 0.0], [0.5, 2.0, 0.0], [0.0, 0.25, 3.0]],
+        positions: vec![[0., 0., 0.0]],
+        pbc: [true, true, true],
+        tolerance: 0.0001,
+    };
+    let offset = atoms.cell_offset([1, 2, 3]);
+    assert_eq!(offset, [2.0, 4.75, 9.0]);
+}
+
+// --- reciprocal_cell zero volume ---
+
+#[test]
+fn test_reciprocal_cell_zero_volume() {
+    let atoms = Atoms {
+        cell: [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+        positions: vec![[0., 0., 0.0]],
+        pbc: [true, true, true],
+        tolerance: 0.0001,
+    };
+    // Cell vectors (1,0,0) and (1,0,0) are linearly dependent → volume=0
+    let bounds = atoms.offset_bounds_in_radius([0.0, 0.0, 0.0], 5.0);
+    assert_eq!(bounds, [[0, 0]; 3]);
+}
+
+// --- find_neighbors variants ---
+
+#[test]
+fn test_get_neighbor_from() {
+    let atoms = two_site_unit_atoms();
+    let distances = atoms.calc_distance_from(0, 1);
+    let neighbors = atoms.get_neighbor_from(distances, 1);
+    let offsets: Vec<_> = neighbors.iter().map(|neighbor| neighbor.offset).collect();
+    assert_eq!(offsets, vec![[-1, 0, 0], [0, 0, 0]]);
+    assert!(neighbors.iter().all(|neighbor| neighbor.from == 0));
+    assert!(neighbors.iter().all(|neighbor| neighbor.to == 1));
+}
+
+#[test]
+fn test_find_neighbors_by_radius_found() {
+    let atoms = two_site_unit_atoms();
+    // find_neighbors_from uses find_neighbors_by_radius internally
+    let neighbors = atoms.find_neighbors_from(0, 1);
+    let offsets: Vec<_> = neighbors.iter().map(|neighbor| neighbor.offset).collect();
+    assert_eq!(offsets, vec![[-1, 0, 0], [0, 0, 0]]);
+}
+
+#[test]
+fn test_find_neighbors_order_zero_is_empty() {
+    let atoms = two_site_unit_atoms();
+
+    assert!(atoms.find_neighbors_from(0, 0).is_empty());
+    assert!(atoms.find_neighbors_from_to(0, 1, 0).is_empty());
+}
+
+// --- offset_bounds_in_radius edge cases ---
+
+#[test]
+fn test_offset_bounds_in_radius_zero_radius() {
+    let atoms = Atoms {
+        cell: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        positions: vec![[0., 0., 0.0]],
+        pbc: [true, true, true],
+        tolerance: 0.0001,
+    };
+    let bounds = atoms.offset_bounds_in_radius([0.0, 0.0, 0.0], 0.0);
+    assert_eq!(bounds, [[-1, 1], [-1, 1], [-1, 1]]);
 }
 
 #[test]

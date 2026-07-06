@@ -146,3 +146,7 @@ pub enum Model {
     Xy,
     Heisenberg,
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod config_tests;

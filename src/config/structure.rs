@@ -156,3 +156,7 @@ impl fmt::Display for StructureConf {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "structure_tests.rs"]
+mod tests;

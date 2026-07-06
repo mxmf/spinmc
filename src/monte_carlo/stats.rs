@@ -314,3 +314,7 @@ impl fmt::Display for StatResult {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "stats_tests.rs"]
+mod tests;

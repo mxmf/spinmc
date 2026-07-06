@@ -186,3 +186,7 @@ impl fmt::Display for ParsedExchange {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "exchange_tests.rs"]
+mod tests;

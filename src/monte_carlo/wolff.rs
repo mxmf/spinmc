@@ -32,7 +32,7 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
 
                 let neighbor_spin = &grid.spins[*neighbor];
 
-                if !neighbor_spin.is_aligned(&grid.spins[site]) {
+                if !neighbor_spin.same_side(&grid.spins[site]) {
                     continue;
                 }
 
@@ -83,3 +83,7 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
         cluster.len()
     }
 }
+
+#[cfg(test)]
+#[path = "wolff_tests.rs"]
+mod tests;

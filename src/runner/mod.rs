@@ -36,10 +36,11 @@ pub fn run(content: &str) -> anyhow::Result<()> {
         group_num: run_config.output.group.len(),
     };
 
-    ThreadPoolBuilder::new()
+    // Rayon allows the global pool to be initialized only once per process.
+    // Reuse the existing pool when tests or callers invoke `run` repeatedly.
+    let _ = ThreadPoolBuilder::new()
         .num_threads(run_config.simulation.num_threads)
-        .build_global()
-        .unwrap();
+        .build_global();
 
     let results = match run_config.simulation.model {
         config::Model::Ising => run_simulations::<IsingSpin>(&run_config, &stats_config),
@@ -77,7 +78,15 @@ struct ProgressConfig {
 }
 
 fn progress_config(config: &Config, total_steps: usize) -> ProgressConfig {
-    let use_bars = config.output.progress_bar && std::io::stderr().is_terminal();
+    progress_config_with_terminal(config, total_steps, std::io::stderr().is_terminal())
+}
+
+fn progress_config_with_terminal(
+    config: &Config,
+    total_steps: usize,
+    stderr_is_terminal: bool,
+) -> ProgressConfig {
+    let use_bars = config.output.progress_bar && stderr_is_terminal;
     let log_interval = if config.output.progress_log_interval > 0 {
         config.output.progress_log_interval
     } else if use_bars {
@@ -396,3 +405,7 @@ fn run_simulations<S: SpinState>(
         Ok(run_independent(config, stats, algos, grids))
     }
 }
+
+#[cfg(test)]
+#[path = "runner_tests.rs"]
+mod tests;

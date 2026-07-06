@@ -34,3 +34,7 @@ impl fmt::Display for Grid {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "grid_tests.rs"]
+mod tests;

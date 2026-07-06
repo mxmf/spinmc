@@ -59,3 +59,7 @@ impl fmt::Display for ParsedAnisotropy {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "anisotropy_tests.rs"]
+mod tests;

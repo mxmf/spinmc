@@ -126,6 +126,17 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
         self.spins.iter().copied().sum()
     }
     pub fn get_spin_by_coord(&self, sub: usize, x: isize, y: isize, z: isize) -> Option<&S> {
+        if sub >= self.num_sublattices
+            || x < 0
+            || y < 0
+            || z < 0
+            || x >= self.dim[0] as isize
+            || y >= self.dim[1] as isize
+            || z >= self.dim[2] as isize
+        {
+            return None;
+        }
+
         self.spins.get(coord_to_index([x, y, z], sub, self.dim))
     }
 
@@ -180,3 +191,7 @@ fn safe_coord_to_index(
 
     Some(coord_to_index(coord, sublattice, dim))
 }
+
+#[cfg(test)]
+#[path = "grid_tests.rs"]
+mod tests;
