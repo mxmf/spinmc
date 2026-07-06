@@ -1,4 +1,5 @@
 use super::*;
+use std::fmt::Write as _;
 
 fn energy_stats_config(group_num: usize) -> StatsConfig {
     StatsConfig {
@@ -27,11 +28,44 @@ fn unique_temp_file(prefix: &str) -> std::path::PathBuf {
     ))
 }
 
+fn toml_basic_string(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len() + 2);
+    escaped.push('"');
+    for ch in value.chars() {
+        match ch {
+            '\\' => escaped.push_str("\\\\"),
+            '"' => escaped.push_str("\\\""),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '\u{08}' => escaped.push_str("\\b"),
+            '\u{0C}' => escaped.push_str("\\f"),
+            '\u{00}'..='\u{1F}' => write!(escaped, "\\u{:04X}", ch as u32).unwrap(),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped.push('"');
+    escaped
+}
+
 fn non_comment_lines(content: &str) -> Vec<&str> {
     content
         .lines()
         .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
         .collect()
+}
+
+#[test]
+fn toml_basic_string_escapes_windows_paths() {
+    let toml = format!(
+        "savefile = {}",
+        toml_basic_string(r#"C:\Users\runner\AppData\Local\Temp\result.txt"#)
+    );
+    let value: toml::Value = toml::from_str(&toml).unwrap();
+    assert_eq!(
+        value["savefile"].as_str().unwrap(),
+        r#"C:\Users\runner\AppData\Local\Temp\result.txt"#
+    );
 }
 
 fn progress_config_toml(extra_output: &str) -> String {
@@ -289,6 +323,7 @@ group = [[0]]
 fn run_end_to_end_ising() {
     let savefile = unique_temp_file("spinmc_test_result");
     let savefile_str = savefile.to_str().unwrap();
+    let savefile_toml = toml_basic_string(savefile_str);
     let toml = format!(
         r#"
 [simulation]
@@ -314,7 +349,7 @@ strength = 1.0
 
 [output]
 energy = true
-savefile = "{savefile_str}"
+savefile = {savefile_toml}
 group = [[0]]
 "#
     );
