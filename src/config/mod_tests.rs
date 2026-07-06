@@ -205,3 +205,47 @@ energy = true
     assert!(s.contains("Grid"));
     assert!(s.contains("Simulation"));
 }
+
+#[test]
+fn display_config_with_structure_exchange_and_anisotropy() {
+    let toml = r#"
+[simulation]
+initial_state = "random"
+model = "ising"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 2
+spin_magnitudes = [1.0, 1.0]
+periodic_boundary = [true, true, true]
+
+[structure]
+cell = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+positions = [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 1
+offsets = [[0, 0, 0]]
+strength = 1.0
+
+[anisotropy]
+axis = [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0]]
+strength = [2.0, 3.0]
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let s = format!("{config}");
+    assert!(s.contains("Structure"));
+    assert!(s.contains("Exchange Parameters"));
+    assert!(s.contains("Anisotropy Parameters"));
+    assert!(s.contains("ion0"));
+    assert!(s.contains("ion1"));
+}

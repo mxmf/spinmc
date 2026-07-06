@@ -51,6 +51,22 @@ fn energy_stats_config(group_num: usize) -> StatsConfig {
     }
 }
 
+fn all_stats_config(group_num: usize) -> StatsConfig {
+    StatsConfig {
+        energy: true,
+        heat_capacity: true,
+        magnetization: true,
+        susceptibility: true,
+        magnetization_abs: true,
+        susceptibility_abs: true,
+        group_magnetization: true,
+        group_susceptibility: true,
+        group_magnetization_abs: true,
+        group_susceptibility_abs: true,
+        group_num,
+    }
+}
+
 // --- maybe() ---
 
 #[test]
@@ -102,6 +118,30 @@ fn stats_config_display_with_energy() {
     let s = format!("{cfg}");
     assert!(s.contains("Energy"));
     assert!(s.contains("C"));
+}
+
+#[test]
+fn stats_config_display_with_all_observables() {
+    let cfg = all_stats_config(2);
+    let s = format!("{cfg}");
+
+    for expected in [
+        "Energy",
+        "$C$",
+        "M($\\mu_B$)",
+        "$\\chi$",
+        "|M|",
+        "M$_0$",
+        "M$_1$",
+        "$\\chi_0",
+        "$\\chi_1",
+        "|M|_0",
+        "|M|_1",
+        "$|\\chi|_0",
+        "$|\\chi|_1",
+    ] {
+        assert!(s.contains(expected), "missing {expected} in {s}");
+    }
 }
 
 // --- Stats::result() formulas ---
@@ -250,6 +290,34 @@ fn result_single_step_variance_zero() {
     assert!((r.susceptibility.unwrap() - 0.0).abs() < 1e-10);
 }
 
+#[test]
+fn result_group_observables() {
+    let stats = make_stats(|s| {
+        s.steps = 2;
+        s.kb = 1.0;
+        s.t = 1.0;
+        s.stats_config = all_stats_config(2);
+        s.partial_m_sum = vec![
+            IsingSpin::along_z(8.0).unwrap(),
+            IsingSpin::along_z(4.0).unwrap(),
+        ];
+        s.partial_m_2_sum = vec![64.0, 20.0];
+        s.partial_m_abs_sum = vec![6.0, 2.0];
+        s.partial_size = vec![4.0, 2.0];
+    });
+
+    let r = stats.result();
+    assert_eq!(r.group_mag.as_ref().unwrap().len(), 2);
+    assert!((r.group_mag.as_ref().unwrap()[0] - 1.0).abs() < 1e-10);
+    assert!((r.group_mag.as_ref().unwrap()[1] - 1.0).abs() < 1e-10);
+    assert!((r.group_sus.as_ref().unwrap()[0] - 4.0).abs() < 1e-10);
+    assert!((r.group_sus.as_ref().unwrap()[1] - 3.0).abs() < 1e-10);
+    assert!((r.group_mag_abs.as_ref().unwrap()[0] - 0.75).abs() < 1e-10);
+    assert!((r.group_mag_abs.as_ref().unwrap()[1] - 0.5).abs() < 1e-10);
+    assert!((r.group_sus_abs.as_ref().unwrap()[0] - 5.75).abs() < 1e-10);
+    assert!((r.group_sus_abs.as_ref().unwrap()[1] - 4.5).abs() < 1e-10);
+}
+
 // --- StatResult Display ---
 
 #[test]
@@ -262,6 +330,30 @@ fn stat_result_display_contains_temperature() {
     let s = format!("{r}");
     assert!(s.contains("300"));
     assert!(s.contains("-42"));
+}
+
+#[test]
+fn stat_result_display_contains_all_observables() {
+    let r = StatResult {
+        t: 300.0,
+        energy: Some(-1.0),
+        specific_heat: Some(2.0),
+        magnetization: Some(3.0),
+        susceptibility: Some(4.0),
+        magnetization_abs: Some(5.0),
+        susceptibility_abs: Some(6.0),
+        group_mag: Some(vec![7.0, 8.0]),
+        group_sus: Some(vec![9.0]),
+        group_mag_abs: Some(vec![10.0]),
+        group_sus_abs: Some(vec![11.0]),
+    };
+    let s = format!("{r}");
+
+    for expected in [
+        "300", "-1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
+    ] {
+        assert!(s.contains(expected), "missing {expected} in {s}");
+    }
 }
 
 // --- Stats::new() with Config ---
@@ -308,4 +400,26 @@ fn stats_record_multiple_steps() {
     assert!((stats.energy_sum - 3.0 * expected_energy).abs() < 1e-10);
     let result = stats.result();
     assert!((result.energy.unwrap() - expected_energy / grid.size as f64).abs() < 1e-10);
+}
+
+#[test]
+fn stats_record_all_observables() {
+    let config = ising_grid_config();
+    let stats_config = all_stats_config(1);
+    let mut stats: Stats<IsingSpin> = Stats::new(&config, 1.0, stats_config);
+    let rng = SmallRng::seed_from_u64(42);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let energy = grid.total_energy();
+
+    stats.record(&grid);
+
+    assert_eq!(stats.steps, 1);
+    assert!((stats.energy_sum - energy).abs() < 1e-10);
+    assert!((stats.energy2_sum - energy * energy).abs() < 1e-10);
+    assert_eq!(stats.m_sum.to_array(), [0.0, 0.0, 4.0]);
+    assert_eq!(stats.m_abs_sum, 4.0);
+    assert_eq!(stats.m_2_sum, 16.0);
+    assert_eq!(stats.partial_m_sum[0].to_array(), [0.0, 0.0, 4.0]);
+    assert_eq!(stats.partial_m_abs_sum[0], 4.0);
+    assert_eq!(stats.partial_m_2_sum[0], 16.0);
 }

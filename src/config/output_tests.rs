@@ -68,3 +68,40 @@ fn display() {
     assert!(s.contains("out.txt"));
     assert!(s.contains("Energy"));
 }
+
+#[test]
+fn display_all_observables_and_groups() {
+    let o = Output {
+        savefile: "out.txt".into(),
+        energy: true,
+        heat_capacity: true,
+        magnetization: true,
+        susceptibility: true,
+        magnetization_abs: true,
+        susceptibility_abs: true,
+        group_magnetization: true,
+        group_susceptibility: true,
+        group_magnetization_abs: true,
+        group_susceptibility_abs: true,
+        group: vec![vec![0], vec![1, 2]],
+        stats_interval: 3,
+        progress_bar: false,
+        progress_log_interval: 7,
+    };
+    let s = format!("{o}");
+    for expected in [
+        "Heat Capacity",
+        "Magnetization",
+        "Susceptibility",
+        "Magnetization_abs",
+        "susceptibility_abs",
+        "Group Magnetization",
+        "Group Susceptibility",
+        "Group |Magnetization|",
+        "Group |Susceptibility|",
+        "Group 0",
+        "Group 1",
+    ] {
+        assert!(s.contains(expected), "missing {expected} in {s}");
+    }
+}

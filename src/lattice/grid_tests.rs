@@ -649,6 +649,42 @@ energy = true
 }
 
 #[test]
+fn grid_new_initial_state_heisenberg_y() {
+    let toml = r#"
+[simulation]
+initial_state = "y"
+model = "heisenberg"
+equilibration_steps = 100
+measurement_steps = 1000
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 1, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0]]
+strength = 1.0
+
+[output]
+energy = true
+"#;
+    let config = Config::new(toml).unwrap();
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<crate::spin::HeisenbergSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    assert_eq!(grid.spins.len(), 2);
+    for spin in &grid.spins {
+        assert_eq!(spin.to_array(), [0.0, 1.0, 0.0]);
+    }
+}
+
+#[test]
 fn grid_new_non_periodic_boundary_excludes_oob_neighbors() {
     let toml = r#"
 [simulation]

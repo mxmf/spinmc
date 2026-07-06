@@ -126,3 +126,22 @@ fn display() {
     assert!(output.contains("Heisenberg"));
     assert!(output.contains("Wolff"));
 }
+
+#[test]
+fn display_parallel_tempering_enabled() {
+    let s = Simulation {
+        initial_state: InitialState::Z,
+        model: Model::Ising,
+        equilibration_steps: 10,
+        measurement_steps: 20,
+        temperatures: vec![1.0],
+        temperature_range: vec![],
+        num_threads: 2,
+        pt_interval: 5,
+        algorithm: Algorithm::Metropolis,
+        boltzmann_constant: 1.0,
+    };
+    let output = format!("{s}");
+    assert!(output.contains("enabled"));
+    assert!(output.contains("swap every 5"));
+}

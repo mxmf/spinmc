@@ -231,6 +231,17 @@ fn make_ham(exchange: bool, anisotropy: bool) -> Hamiltonian {
     }
 }
 
+fn make_ham_full(exchange: bool, anisotropy: bool, zeeman: bool, dm: bool) -> Hamiltonian {
+    Hamiltonian {
+        config: HamiltonianConfig {
+            exchange_enable: exchange,
+            anisotropy_enable: anisotropy,
+            zeeman_enable: zeeman,
+            dm_enable: dm,
+        },
+    }
+}
+
 #[test]
 fn hamiltonian_compute_all_disabled() {
     let ham = make_ham(false, false);
@@ -317,4 +328,44 @@ fn hamiltonian_compute_anisotropy_delegates() {
     let e = ham.compute_anisotropy(&spin, &ci);
     // -5 * (1)^2 = -5
     assert!((e + 5.0).abs() < 1e-10);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn hamiltonian_compute_zeeman_panics_until_implemented() {
+    let ham = make_ham_full(false, false, true, false);
+    let spin = IsingSpin::along_z(1.0).unwrap();
+    let ci = CalcInput::default();
+
+    ham.compute(&spin, &ci, &[]);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn hamiltonian_compute_dm_panics_until_implemented() {
+    let ham = make_ham_full(false, false, false, true);
+    let spin = IsingSpin::along_z(1.0).unwrap();
+    let ci = CalcInput::default();
+
+    ham.compute(&spin, &ci, &[]);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn hamiltonian_local_compute_zeeman_panics_until_implemented() {
+    let ham = make_ham_full(false, false, true, false);
+    let spin = IsingSpin::along_z(1.0).unwrap();
+    let ci = CalcInput::default();
+
+    ham.local_compute(&spin, &ci, &[]);
+}
+
+#[test]
+#[should_panic(expected = "not implemented")]
+fn hamiltonian_local_compute_dm_panics_until_implemented() {
+    let ham = make_ham_full(false, false, false, true);
+    let spin = IsingSpin::along_z(1.0).unwrap();
+    let ci = CalcInput::default();
+
+    ham.local_compute(&spin, &ci, &[]);
 }

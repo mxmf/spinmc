@@ -1,4 +1,5 @@
-use super::{is_vasp_format, parse_poscar_from_str};
+use super::{is_vasp_format, load_from_file, parse_poscar_from_str};
+use std::fs;
 
 fn parse(content: &str) -> super::Structure {
     parse_poscar_from_str(content.trim(), "test").expect("failed to parse POSCAR")
@@ -51,6 +52,55 @@ fn explicit_format_takes_precedence() {
     // format explicitly set to xyz even though filename looks like POSCAR
     assert!(!is_vasp_format(&Some("xyz".into()), "POSCAR"));
     assert!(!is_vasp_format(&Some("cif".into()), "structure.vasp"));
+}
+
+#[test]
+fn load_from_file_with_explicit_xyz_format() {
+    let path =
+        std::env::temp_dir().join(format!("spinmc-structure-xyz-{}.xyz", std::process::id()));
+    fs::write(
+        &path,
+        "\
+2
+comment
+H 0.0 0.0 0.0
+He 1.0 2.0 3.0
+",
+    )
+    .unwrap();
+
+    let structure = load_from_file(path.to_str().unwrap(), Some("XYZ".into())).unwrap();
+
+    assert_eq!(structure.positions.len(), 2);
+    assert_eq!(structure.positions[0], [0.0, 0.0, 0.0]);
+    assert_eq!(structure.positions[1], [1.0, 2.0, 3.0]);
+    assert!(structure.frame.is_some());
+
+    fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn load_from_file_infers_xyz_format_from_extension() {
+    let path = std::env::temp_dir().join(format!(
+        "spinmc-structure-xyz-infer-{}.xyz",
+        std::process::id()
+    ));
+    fs::write(
+        &path,
+        "\
+1
+comment
+H 4.0 5.0 6.0
+",
+    )
+    .unwrap();
+
+    let structure = load_from_file(path.to_str().unwrap(), None).unwrap();
+
+    assert_eq!(structure.positions, vec![[4.0, 5.0, 6.0]]);
+    assert!(structure.frame.is_some());
+
+    fs::remove_file(path).unwrap();
 }
 
 // ─── parse_poscar_from_str: happy paths ────────────────────────────
@@ -441,6 +491,25 @@ Direct
 }
 
 #[test]
+fn error_coordinate_too_few_columns() {
+    let err = parse_poscar_from_str(
+        "\
+comment
+1.0
+  1 0 0
+  0 1 0
+  0 0 1
+  1
+Direct
+  0.5 0.5
+",
+        "test",
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("invalid coordinate line"));
+}
+
+#[test]
 fn error_insufficient_coordinate_lines() {
     let err = parse_poscar_from_str(
         "\
@@ -477,4 +546,22 @@ comment
         err.to_string().contains("missing coordinate data")
             || err.to_string().contains("too short")
     );
+}
+
+#[test]
+fn error_missing_coordinate_data_after_element_counts() {
+    let err = parse_poscar_from_str(
+        "\
+comment
+1.0
+  1 0 0
+  0 1 0
+  0 0 1
+H
+1
+",
+        "test",
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("missing coordinate data"));
 }

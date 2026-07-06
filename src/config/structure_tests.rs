@@ -289,3 +289,22 @@ fn display() {
     let s = format!("{sc}");
     assert!(s.contains("test.vasp"));
 }
+
+#[test]
+fn display_file_mode_includes_format_and_parse_error() {
+    let sc = StructureConf {
+        file: Some("missing.poscar".into()),
+        format: Some("POSCAR".into()),
+        cell: None,
+        positions: None,
+        tolerance: None,
+        magnetic_indices: None,
+    };
+
+    let s = format!("{sc}");
+
+    assert!(s.contains("Mode: from file"));
+    assert!(s.contains("File: missing.poscar"));
+    assert!(s.contains("Format: POSCAR"));
+    assert!(s.contains("[Failed to parse:"));
+}
