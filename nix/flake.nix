@@ -47,7 +47,6 @@
               cargo-expand
               cargo-show-asm
 
-              hdf5
               cmake
               pkg-config
 

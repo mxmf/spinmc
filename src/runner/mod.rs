@@ -259,17 +259,8 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
             if let Some(snapshots) = &config.snapshots {
                 let snapshot_dir = &snapshots.save_directory;
                 std::fs::create_dir_all(snapshot_dir).unwrap();
-                let file_name = format!("{snapshot_dir}/T_{t:.4}.h5");
-                match config::save_snapshots_to_hdf5(
-                    &file_name,
-                    &equil_snapshots,
-                    &measure_snapshots,
-                ) {
-                    Ok(_) => info!("Saved snapshots to file {file_name} successfully"),
-                    Err(e) => {
-                        info!("Failed to save snapshots to file {file_name} because {e}")
-                    }
-                };
+                // TODO: NPZ save will be re-added in step 4
+                let _ = (snapshot_dir, &equil_snapshots, &measure_snapshots, t);
             };
             sub_pb.set_position(total_steps as u64);
             sub_pb.finish_with_message(format!("T={:.4} ✓", config.simulation.temperatures[idx]));
