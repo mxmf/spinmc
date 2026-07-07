@@ -11,12 +11,30 @@ pub struct Grid {
 
 impl Grid {
     pub fn validate(&self) -> anyhow::Result<()> {
+        for (axis, dimension) in self.dimensions.iter().enumerate() {
+            if *dimension == 0 {
+                anyhow::bail!("dimensions[{axis}] must be greater than zero");
+            }
+        }
+
+        if self.sublattices == 0 {
+            anyhow::bail!("sublattices must be greater than zero");
+        }
+
         if self.sublattices != self.spin_magnitudes.len() {
             anyhow::bail!(
                 "spin_magnitude length ({}) does not match sublattices ({})",
                 self.spin_magnitudes.len(),
                 self.sublattices
             );
+        }
+
+        for (index, magnitude) in self.spin_magnitudes.iter().enumerate() {
+            if !magnitude.is_finite() || *magnitude <= 0.0 {
+                anyhow::bail!(
+                    "spin_magnitudes[{index}] ({magnitude}) must be finite and greater than zero"
+                );
+            }
         }
         Ok(())
     }
