@@ -15,6 +15,36 @@ fn validate_trivially_ok() {
 }
 
 #[test]
+fn validate_accepts_supported_compression_levels() {
+    for compression_level in 0..=9 {
+        let s = Snapshots {
+            equilibration_interval: 0,
+            measurement_interval: 0,
+            compression_level,
+            save_directory: "snapshots".into(),
+        };
+
+        assert!(
+            s.validate().is_ok(),
+            "compression level {compression_level} should be supported"
+        );
+    }
+}
+
+#[test]
+fn validate_rejects_compression_level_above_nine() {
+    let s = Snapshots {
+        equilibration_interval: 0,
+        measurement_interval: 0,
+        compression_level: 10,
+        save_directory: "snapshots".into(),
+    };
+
+    let err = s.validate().unwrap_err().to_string();
+    assert!(err.contains("compression_level"));
+}
+
+#[test]
 fn display() {
     let s = Snapshots {
         equilibration_interval: 5,
@@ -78,27 +108,31 @@ fn read_npz_arrays(filename: &str) -> (ArrayD<f64>, ArrayD<f64>) {
 }
 
 #[test]
-fn npz_round_trip() {
+fn npz_round_trip_all_supported_compression_levels() {
     let equil = vec![
         dummy_snap([1, 2, 2, 2, 3], 0.0),
         dummy_snap([1, 2, 2, 2, 3], 100_000.0),
     ];
     let steps = vec![dummy_snap([1, 2, 2, 2, 3], 200_000.0)];
 
-    let file = unique_npz_path("test_spinmc_npz_round_trip");
-    let filename = file.to_str().unwrap();
+    for compression_level in 0..=9 {
+        let file = unique_npz_path(&format!(
+            "test_spinmc_npz_round_trip_level_{compression_level}"
+        ));
+        let filename = file.to_str().unwrap();
 
-    save_snapshots_to_npz(filename, &equil, &steps).unwrap();
+        save_snapshots_to_npz(filename, &equil, &steps, compression_level).unwrap();
 
-    let (read_equil, read_steps) = read_npz_arrays(filename);
+        let (read_equil, read_steps) = read_npz_arrays(filename);
 
-    assert_eq!(read_equil.shape(), &[2, 1, 2, 2, 2, 3]);
-    assert_eq!(read_steps.shape(), &[1, 1, 2, 2, 2, 3]);
-    assert_eq!(read_equil[[0, 0, 1, 1, 1, 2]], equil[0][[0, 1, 1, 1, 2]]);
-    assert_eq!(read_equil[[1, 0, 1, 1, 1, 2]], equil[1][[0, 1, 1, 1, 2]]);
-    assert_eq!(read_steps[[0, 0, 1, 1, 1, 2]], steps[0][[0, 1, 1, 1, 2]]);
+        assert_eq!(read_equil.shape(), &[2, 1, 2, 2, 2, 3]);
+        assert_eq!(read_steps.shape(), &[1, 1, 2, 2, 2, 3]);
+        assert_eq!(read_equil[[0, 0, 1, 1, 1, 2]], equil[0][[0, 1, 1, 1, 2]]);
+        assert_eq!(read_equil[[1, 0, 1, 1, 1, 2]], equil[1][[0, 1, 1, 1, 2]]);
+        assert_eq!(read_steps[[0, 0, 1, 1, 1, 2]], steps[0][[0, 1, 1, 1, 2]]);
 
-    std::fs::remove_file(filename).unwrap();
+        std::fs::remove_file(filename).unwrap();
+    }
 }
 
 #[test]
@@ -109,7 +143,7 @@ fn npz_empty_snapshots() {
     let file = unique_npz_path("test_spinmc_npz_empty");
     let filename = file.to_str().unwrap();
 
-    save_snapshots_to_npz(filename, &equil, &steps).unwrap();
+    save_snapshots_to_npz(filename, &equil, &steps, 0).unwrap();
 
     let (read_equil, read_steps) = read_npz_arrays(filename);
 
@@ -125,7 +159,7 @@ fn npz_empty_side_uses_non_empty_side_shape() {
     let file = unique_npz_path("test_spinmc_npz_empty_side");
     let filename = file.to_str().unwrap();
 
-    save_snapshots_to_npz(filename, std::slice::from_ref(&snap), &[]).unwrap();
+    save_snapshots_to_npz(filename, std::slice::from_ref(&snap), &[], 6).unwrap();
 
     let (read_equil, read_steps) = read_npz_arrays(filename);
 
@@ -141,7 +175,7 @@ fn npz_named_arrays() {
     let file = unique_npz_path("test_spinmc_npz_names");
     let filename = file.to_str().unwrap();
 
-    save_snapshots_to_npz(filename, &[snap], &[]).unwrap();
+    save_snapshots_to_npz(filename, &[snap], &[], 8).unwrap();
 
     let mut reader = NpzReader::new(File::open(filename).unwrap()).unwrap();
     let names = reader.names().unwrap();

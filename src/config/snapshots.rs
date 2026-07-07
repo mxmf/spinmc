@@ -5,6 +5,8 @@ use std::fs::File;
 
 use ndarray::Axis;
 use ndarray_npy::NpzWriter;
+use zip::CompressionMethod;
+use zip::write::SimpleFileOptions;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -25,6 +27,12 @@ fn default_save_dir() -> String {
 
 impl Snapshots {
     pub fn validate(&self) -> anyhow::Result<()> {
+        if self.compression_level > 9 {
+            anyhow::bail!(
+                "Snapshot compression_level must be between 0 and 9, got {}",
+                self.compression_level
+            );
+        }
         Ok(())
     }
 }
@@ -53,6 +61,7 @@ pub fn save_snapshots_to_npz(
     filename: &str,
     equil_data: &[ndarray::Array5<f64>],
     steps_data: &[ndarray::Array5<f64>],
+    compression_level: usize,
 ) -> anyhow::Result<()> {
     fn stack_snapshots(
         arrays: &[ndarray::Array5<f64>],
@@ -77,7 +86,14 @@ pub fn save_snapshots_to_npz(
     let equil_stacked = stack_snapshots(equil_data, snapshot_shape)?;
     let steps_stacked = stack_snapshots(steps_data, snapshot_shape)?;
 
-    let mut npz = NpzWriter::new_compressed(File::create(filename)?);
+    let options = if compression_level == 0 {
+        SimpleFileOptions::default().compression_method(CompressionMethod::Stored)
+    } else {
+        SimpleFileOptions::default()
+            .compression_method(CompressionMethod::Deflated)
+            .compression_level(Some(compression_level as i64))
+    };
+    let mut npz = NpzWriter::new_with_options(File::create(filename)?, options);
     npz.add_array("equil", &equil_stacked)?;
     npz.add_array("steps", &steps_stacked)?;
     npz.finish()?;

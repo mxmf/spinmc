@@ -264,6 +264,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
                     &file_name,
                     &equil_snapshots,
                     &measure_snapshots,
+                    snapshots.compression_level,
                 ) {
                     Ok(_) => info!("Saved snapshots to file {file_name} successfully"),
                     Err(e) => {
@@ -420,6 +421,7 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
                 &file_name,
                 &equil_snapshots[t],
                 &measure_snapshots[t],
+                snaps.compression_level,
             ) {
                 Ok(_) => info!("Saved snapshots to file {file_name} successfully"),
                 Err(e) => info!("Failed to save snapshots to file {file_name} because {e}"),
