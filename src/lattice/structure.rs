@@ -1,5 +1,4 @@
 use anyhow::Context;
-use chemfiles::{self, CellShape};
 use std::io::Read;
 
 #[derive(Debug)]
@@ -8,7 +7,6 @@ pub struct Structure {
     pub positions: Vec<[f64; 3]>,
     pub tolerance: Option<f64>,
     pub magnetic_indices: Option<Vec<u64>>,
-    pub frame: Option<chemfiles::Frame>,
 }
 
 fn is_vasp_format(format: &Option<String>, filename: &str) -> bool {
@@ -48,39 +46,10 @@ pub fn load_from_file(stru_file: &str, format: Option<String>) -> anyhow::Result
         let mut content = String::new();
         file.read_to_string(&mut content)
             .with_context(|| format!("failed to read POSCAR `{stru_file}`"))?;
-        return parse_poscar_from_str(&content, stru_file);
-    }
-
-    let mut trajectory = if let Some(format) = &format {
-        chemfiles::Trajectory::open_with_format(stru_file, 'r', format.as_str()).with_context(
-            || format!("failed to read structure from structure file `{stru_file}`"),
-        )?
+        parse_poscar_from_str(&content, stru_file)
     } else {
-        chemfiles::Trajectory::open(stru_file, 'r').with_context(|| {
-            format!("failed to read structure from structure file `{stru_file}`")
-        })?
-    };
-
-    let mut frame = chemfiles::Frame::new();
-    trajectory
-        .read(&mut frame)
-        .with_context(|| format!("failed to read structure from structure file `{stru_file}`"))?;
-
-    let cell = frame.cell();
-    let cell = match cell.shape() {
-        CellShape::Infinite => {
-            anyhow::bail!("structure file `{stru_file}` does not contain a finite unit cell")
-        }
-        CellShape::Orthorhombic | CellShape::Triclinic => cell.matrix(),
-    };
-
-    Ok(Structure {
-        positions: frame.positions().to_vec(),
-        cell,
-        tolerance: None,
-        magnetic_indices: None,
-        frame: Some(frame),
-    })
+        anyhow::bail!("now only support vasp format")
+    }
 }
 
 fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure> {
@@ -203,7 +172,6 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
         positions,
         tolerance: None,
         magnetic_indices: None,
-        frame: None,
     })
 }
 

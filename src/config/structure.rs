@@ -38,7 +38,6 @@ impl StructureConf {
                     structure.positions = indices.iter().map(|&i| structure.positions[i]).collect();
                     structure.magnetic_indices = None;
 
-                    // Keep the full frame (includes non-magnetic atoms) for export use
                 }
                 Ok(structure)
             }
@@ -54,7 +53,6 @@ impl StructureConf {
                     positions: positions.to_vec(),
                     tolerance: self.tolerance,
                     magnetic_indices: None,
-                    frame: None,
                 })
             }
             (None, None, None) => anyhow::bail!(
