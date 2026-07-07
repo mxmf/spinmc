@@ -141,9 +141,14 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
     }
 
     #[cfg(feature = "snapshots")]
-    pub fn spins_to_array(&self) -> ndarray::Array4<S> {
-        let mut result =
-            ndarray::Array4::default([self.num_sublattices, self.dim[0], self.dim[1], self.dim[2]]);
+    pub fn spins_to_array(&self) -> ndarray::Array5<f64> {
+        let mut result = ndarray::Array5::default([
+            self.num_sublattices,
+            self.dim[0],
+            self.dim[1],
+            self.dim[2],
+            3,
+        ]);
         for (sub, x, y, z) in iproduct!(
             0..self.num_sublattices,
             0..self.dim[0],
@@ -151,7 +156,10 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             0..self.dim[2]
         ) {
             if let Some(spin) = self.get_spin_by_coord(sub, x as isize, y as isize, z as isize) {
-                result[[sub, x, y, z]] = *spin;
+                let components = spin.to_array();
+                result[[sub, x, y, z, 0]] = components[0];
+                result[[sub, x, y, z, 1]] = components[1];
+                result[[sub, x, y, z, 2]] = components[2];
             } else {
                 unreachable!(
                     "Internal error: invalid spin coordinate (sub={sub}, x={x}, y={y}, z={z})"
