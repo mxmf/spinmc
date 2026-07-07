@@ -5,3 +5,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      rust-random:
+        patterns:
+          - "rand"
+          - "rand_core"
+          - "rand_pcg"
+          - "rand_distr"
+          - "rand_chacha"
+          - "getrandom"
