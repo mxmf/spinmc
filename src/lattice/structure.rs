@@ -6,7 +6,7 @@ pub struct Structure {
     pub cell: [[f64; 3]; 3],
     pub positions: Vec<[f64; 3]>,
     pub tolerance: Option<f64>,
-    pub magnetic_indices: Option<Vec<u64>>,
+    pub magnetic_indices: Vec<u64>,
     pub full_structure: Option<FullStructure>,
 }
 
@@ -199,7 +199,7 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
         cell: lattice,
         positions,
         tolerance: None,
-        magnetic_indices: None,
+        magnetic_indices: (0..total_atoms as u64).collect(),
         full_structure: Some(FullStructure {
             cell: lattice,
             atoms,

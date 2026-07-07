@@ -20,6 +20,7 @@ impl StructureConf {
                 let mut structure = lattice::load_from_file(file, self.format.clone())?;
                 structure.tolerance = self.tolerance;
                 if let Some(indices) = &self.magnetic_indices {
+                    structure.magnetic_indices = indices.clone();
                     let indices: Vec<usize> = indices.iter().map(|&i| i as usize).collect();
 
                     let mut seen = std::collections::HashSet::new();
@@ -36,7 +37,6 @@ impl StructureConf {
                     }
 
                     structure.positions = indices.iter().map(|&i| structure.positions[i]).collect();
-                    structure.magnetic_indices = None;
                 }
                 Ok(structure)
             }
@@ -48,7 +48,7 @@ impl StructureConf {
                     cell: *cell,
                     positions: positions.to_vec(),
                     tolerance: self.tolerance,
-                    magnetic_indices: None,
+                    magnetic_indices: (0..positions.len() as u64).collect(),
                     full_structure: Some(FullStructure {
                         cell: *cell,
                         atoms: positions
@@ -62,6 +62,7 @@ impl StructureConf {
                     }),
                 };
                 if let Some(indices) = &self.magnetic_indices {
+                    structure.magnetic_indices = indices.clone();
                     let indices: Vec<usize> = indices.iter().map(|&i| i as usize).collect();
 
                     let mut seen = std::collections::HashSet::new();
