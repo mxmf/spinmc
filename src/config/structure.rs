@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::lattice::{self, Structure};
+use crate::lattice::{self, FullStructure, Structure, StructureAtom};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StructureConf {
@@ -20,6 +20,7 @@ impl StructureConf {
                 let mut structure = lattice::load_from_file(file, self.format.clone())?;
                 structure.tolerance = self.tolerance;
                 if let Some(indices) = &self.magnetic_indices {
+                    structure.magnetic_indices = indices.clone();
                     let indices: Vec<usize> = indices.iter().map(|&i| i as usize).collect();
 
                     let mut seen = std::collections::HashSet::new();
@@ -36,26 +37,50 @@ impl StructureConf {
                     }
 
                     structure.positions = indices.iter().map(|&i| structure.positions[i]).collect();
-                    structure.magnetic_indices = None;
-
-                    // Keep the full frame (includes non-magnetic atoms) for export use
                 }
                 Ok(structure)
             }
             (None, Some(cell), Some(positions)) => {
-                if self.magnetic_indices.is_some() {
-                    anyhow::bail!("`magnetic_indices` is only valid when loading from a `file`");
-                }
                 if self.format.is_some() {
                     anyhow::bail!("`format` is only valid when loading from a `file`");
                 }
-                Ok(Structure {
+                let mut structure = Structure {
                     cell: *cell,
                     positions: positions.to_vec(),
                     tolerance: self.tolerance,
-                    magnetic_indices: None,
-                    frame: None,
-                })
+                    magnetic_indices: (0..positions.len() as u64).collect(),
+                    full_structure: Some(FullStructure {
+                        cell: *cell,
+                        atoms: positions
+                            .iter()
+                            .copied()
+                            .map(|position| StructureAtom {
+                                element: "X".to_string(),
+                                position,
+                            })
+                            .collect(),
+                    }),
+                };
+                if let Some(indices) = &self.magnetic_indices {
+                    structure.magnetic_indices = indices.clone();
+                    let indices: Vec<usize> = indices.iter().map(|&i| i as usize).collect();
+
+                    let mut seen = std::collections::HashSet::new();
+                    for &i in &indices {
+                        if i >= structure.positions.len() {
+                            anyhow::bail!(
+                                "magnetic_indices contains index {i} which is out of range, only {} atoms provided",
+                                structure.positions.len()
+                            );
+                        }
+                        if !seen.insert(i) {
+                            anyhow::bail!("magnetic_indices contains duplicate index {i}");
+                        }
+                    }
+
+                    structure.positions = indices.iter().map(|&i| structure.positions[i]).collect();
+                }
+                Ok(structure)
             }
             (None, None, None) => anyhow::bail!(
                 "structure must be provided: specify either `file` or `cell` and `positions`"
@@ -73,6 +98,7 @@ impl StructureConf {
 
     pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
         if let (None, Some(_), Some(positions)) = (&self.file, &self.cell, &self.positions)
+            && self.magnetic_indices.is_none()
             && positions.len() != sublattices
         {
             anyhow::bail!(
@@ -90,15 +116,15 @@ impl StructureConf {
             );
         }
 
-        // File mode without magnetic_indices: all atoms are magnetic,
+        // Without magnetic_indices: all atoms are magnetic,
         // so positions count must match sublattices.
-        if let (Some(_), None) = (&self.file, &self.magnetic_indices) {
+        if self.magnetic_indices.is_none() {
             let structure = self.parse()?;
             if structure.positions.len() != sublattices {
                 anyhow::bail!(
-                    "number of atoms in file ({}) does not match sublattices ({sublattices}); \
-                     use `magnetic_indices` to select a subset if the file \
-                     contains non-magnetic atoms",
+                    "number of atoms ({}) does not match sublattices ({sublattices}); \
+                     use `magnetic_indices` to select a subset if there \
+                     are non-magnetic atoms",
                     structure.positions.len()
                 );
             }

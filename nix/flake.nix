@@ -61,8 +61,6 @@
               python3Packages.pyqt5
             ];
 
-            CMAKE_POLICY_VERSION_MINIMUM = "3.5";
-
             MPLBACKEND = lib.optionalString stdenv.isLinux "QtAgg";
 
             LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
@@ -76,9 +74,6 @@
             '';
           }
           // lib.optionalAttrs stdenv.isDarwin {
-            # nix's cc-wrapper targets aarch64-apple-darwin, but chemfiles-sys's
-            # cmake build passes --target arm64-apple-macosx; align them here.
-            CMAKE_OSX_ARCHITECTURES = "arm64";
             MACOSX_DEPLOYMENT_TARGET = "14.0";
           }
         );

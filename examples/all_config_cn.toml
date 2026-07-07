@@ -83,7 +83,7 @@ tolerance = 0.0001                       # 距离比较容差（Å）
 
 # 也可以从外部结构文件读取：
 # file = "POSCAR"                         # POSCAR/CONTCAR 和 .vasp 文件会自动识别
-# format = "poscar"                       # 可选；需要时强制指定结构格式
+# format = "poscar"                       # 可选；目前仅支持 POSCAR/CONTCAR 和 .vasp 文件
 # magnetic_indices = [0, 2]               # 可选；从包含更多原子的结构中选择磁性原子
 
 # =======================

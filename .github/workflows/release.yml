@@ -9,9 +9,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # chemfiles-sys's CMakeLists.txt requires cmake < 3.5 compatibility;
-  # GitHub runners now ship cmake 4.x which drops it by default.
-  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
   test:
