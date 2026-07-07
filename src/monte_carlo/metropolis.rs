@@ -1,4 +1,5 @@
 use crate::spin::SpinState;
+use rand::RngExt;
 
 use super::MonteCarlo;
 

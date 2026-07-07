@@ -1,4 +1,5 @@
 use crate::{calculators::HamiltonianConfig, spin::SpinState};
+use rand::RngExt;
 use std::collections::VecDeque;
 
 use super::MonteCarlo;

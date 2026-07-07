@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::spin::SpinState;
+use rand::RngExt;
 
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(C)]
