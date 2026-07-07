@@ -7,6 +7,19 @@ pub struct Structure {
     pub positions: Vec<[f64; 3]>,
     pub tolerance: Option<f64>,
     pub magnetic_indices: Option<Vec<u64>>,
+    pub full_structure: Option<FullStructure>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FullStructure {
+    pub cell: [[f64; 3]; 3],
+    pub atoms: Vec<StructureAtom>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StructureAtom {
+    pub element: String,
+    pub position: [f64; 3],
 }
 
 fn is_vasp_format(format: &Option<String>, filename: &str) -> bool {
@@ -95,7 +108,7 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
     }
 
     // Line 5: element names or atom counts
-    let (_group_symbols, group_counts, coord_start) = if lines[5]
+    let (group_symbols, group_counts, coord_start) = if lines[5]
         .trim()
         .chars()
         .next()
@@ -104,7 +117,15 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
         (vec![], parse_group_counts(lines[5], label)?, 6)
     } else {
         let symbols: Vec<String> = lines[5].split_whitespace().map(|s| s.to_string()).collect();
-        (symbols, parse_group_counts(lines[6], label)?, 7)
+        let counts = parse_group_counts(lines[6], label)?;
+        if symbols.len() != counts.len() {
+            anyhow::bail!(
+                "POSCAR `{label}` has {} element symbols but {} atom count groups",
+                symbols.len(),
+                counts.len()
+            );
+        }
+        (symbols, counts, 7)
     };
 
     if coord_start >= lines.len() {
@@ -138,6 +159,7 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
         anyhow::bail!("POSCAR `{label}` has insufficient coordinate lines");
     }
 
+    let elements = expand_elements(&group_symbols, &group_counts);
     let mut positions = Vec::with_capacity(total_atoms);
     let range = positions_start..positions_start + total_atoms;
     for i in range {
@@ -155,23 +177,33 @@ fn parse_poscar_from_str(content: &str, label: &str) -> anyhow::Result<Structure
             .parse()
             .with_context(|| format!("invalid coordinate in POSCAR `{label}`"))?;
 
-        if is_direct {
-            let cart = [
+        let position = if is_direct {
+            [
                 x * lattice[0][0] + y * lattice[1][0] + z * lattice[2][0],
                 x * lattice[0][1] + y * lattice[1][1] + z * lattice[2][1],
                 x * lattice[0][2] + y * lattice[1][2] + z * lattice[2][2],
-            ];
-            positions.push(cart);
+            ]
         } else {
-            positions.push([x * scale[0], y * scale[1], z * scale[2]]);
-        }
+            [x * scale[0], y * scale[1], z * scale[2]]
+        };
+        positions.push(position);
     }
+
+    let atoms = elements
+        .into_iter()
+        .zip(positions.iter().copied())
+        .map(|(element, position)| StructureAtom { element, position })
+        .collect();
 
     Ok(Structure {
         cell: lattice,
         positions,
         tolerance: None,
         magnetic_indices: None,
+        full_structure: Some(FullStructure {
+            cell: lattice,
+            atoms,
+        }),
     })
 }
 
@@ -181,6 +213,18 @@ fn parse_group_counts(line: &str, label: &str) -> anyhow::Result<Vec<usize>> {
             s.parse::<usize>()
                 .with_context(|| format!("invalid atom count in POSCAR `{label}`: '{s}'"))
         })
+        .collect()
+}
+
+fn expand_elements(group_symbols: &[String], group_counts: &[usize]) -> Vec<String> {
+    if group_symbols.is_empty() {
+        return vec!["X".to_string(); group_counts.iter().sum()];
+    }
+
+    group_symbols
+        .iter()
+        .zip(group_counts)
+        .flat_map(|(symbol, count)| std::iter::repeat_n(symbol.clone(), *count))
         .collect()
 }
 
