@@ -1,7 +1,7 @@
 use indicatif::{
     MultiProgress, ParallelProgressIterator, ProgressBar, ProgressDrawTarget, ProgressStyle,
 };
-use rand::Rng;
+use rand::RngExt;
 use rand_core::SeedableRng;
 use rand_pcg::Pcg64Mcg;
 use rayon::ThreadPoolBuilder;
