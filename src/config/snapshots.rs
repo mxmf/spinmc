@@ -60,9 +60,7 @@ pub fn save_snapshots_to_npz(
     ) -> anyhow::Result<ndarray::ArrayD<f64>> {
         if arrays.is_empty() {
             let [sub, x, y, z, components] = fallback_shape.unwrap_or([0, 0, 0, 0, 3]);
-            return Ok(ndarray::ArrayD::zeros(vec![
-                0, sub, x, y, z, components,
-            ]));
+            return Ok(ndarray::ArrayD::zeros(vec![0, sub, x, y, z, components]));
         }
         let views: Vec<_> = arrays.iter().map(|a| a.view()).collect();
         Ok(ndarray::stack(Axis(0), &views)?.into_dyn())

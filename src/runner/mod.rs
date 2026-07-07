@@ -412,8 +412,10 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
         let snapshot_dir = &snaps.save_directory;
         std::fs::create_dir_all(snapshot_dir).unwrap();
         for t in 0..n_temps {
-            let file_name =
-                format!("{snapshot_dir}/T_{:.4}.npz", config.simulation.temperatures[t]);
+            let file_name = format!(
+                "{snapshot_dir}/T_{:.4}.npz",
+                config.simulation.temperatures[t]
+            );
             match config::save_snapshots_to_npz(
                 &file_name,
                 &equil_snapshots[t],
