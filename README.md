@@ -101,7 +101,7 @@ Exchange interactions can also be generated from the `[structure]` section inste
 ```toml
 [structure]
 file = "POSCAR"
-# format = "poscar"          # Optional; POSCAR/CONTCAR and .vasp files are detected automatically.
+# format = "poscar"          # Optional; currently only POSCAR/CONTCAR and .vasp files are supported.
 # magnetic_indices = [0, 2]  # Optional; select magnetic atoms when the file also contains non-magnetic atoms.
 tolerance = 0.0001
 ```

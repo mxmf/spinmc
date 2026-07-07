@@ -83,7 +83,7 @@ tolerance = 0.0001                       # Distance comparison tolerance (Å)
 
 # Alternatively, load structure from an external file:
 # file = "POSCAR"                         # POSCAR/CONTCAR and .vasp files are detected automatically
-# format = "poscar"                       # Optional; force a structure format when needed
+# format = "poscar"                       # Optional; currently only POSCAR/CONTCAR and .vasp files are supported
 # magnetic_indices = [0, 2]               # Optional; select magnetic atoms from a larger structure
 
 # =======================

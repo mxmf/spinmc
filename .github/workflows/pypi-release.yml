@@ -6,9 +6,6 @@ name: PyPI Release
 env:
   PYTHON_VERSION: "3.12"
   CARGO_HTTP_MULTIPLEXING: "false"
-  # chemfiles-sys's CMakeLists.txt requires cmake < 3.5 compatibility;
-  # GitHub runners now ship cmake 4.x which drops it by default.
-  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 on:
   push:
