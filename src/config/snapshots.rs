@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use std::fmt;
+use std::fs::File;
+
+use ndarray::Axis;
+use ndarray_npy::NpzWriter;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -43,6 +47,32 @@ impl fmt::Display for Snapshots {
 
         Ok(())
     }
+}
+
+pub fn save_snapshots_to_npz(
+    filename: &str,
+    equil_data: &[ndarray::Array5<f64>],
+    steps_data: &[ndarray::Array5<f64>],
+) -> anyhow::Result<()> {
+    fn stack_snapshots(
+        arrays: &[ndarray::Array5<f64>],
+    ) -> anyhow::Result<ndarray::ArrayD<f64>> {
+        if arrays.is_empty() {
+            return Ok(ndarray::ArrayD::zeros(vec![0; 6]));
+        }
+        let views: Vec<_> = arrays.iter().map(|a| a.view()).collect();
+        Ok(ndarray::stack(Axis(0), &views)?.into_dyn())
+    }
+
+    let equil_stacked = stack_snapshots(equil_data)?;
+    let steps_stacked = stack_snapshots(steps_data)?;
+
+    let mut npz = NpzWriter::new_compressed(File::create(filename)?);
+    npz.add_array("equil", &equil_stacked)?;
+    npz.add_array("steps", &steps_stacked)?;
+    npz.finish()?;
+
+    Ok(())
 }
 
 #[cfg(test)]
