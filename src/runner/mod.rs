@@ -259,8 +259,17 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
             if let Some(snapshots) = &config.snapshots {
                 let snapshot_dir = &snapshots.save_directory;
                 std::fs::create_dir_all(snapshot_dir).unwrap();
-                // TODO: NPZ save will be re-added in step 4
-                let _ = (snapshot_dir, &equil_snapshots, &measure_snapshots, t);
+                let file_name = format!("{snapshot_dir}/T_{t:.4}.npz");
+                match config::save_snapshots_to_npz(
+                    &file_name,
+                    &equil_snapshots,
+                    &measure_snapshots,
+                ) {
+                    Ok(_) => info!("Saved snapshots to file {file_name} successfully"),
+                    Err(e) => {
+                        info!("Failed to save snapshots to file {file_name} because {e}")
+                    }
+                };
             };
             sub_pb.set_position(total_steps as u64);
             sub_pb.finish_with_message(format!("T={:.4} ✓", config.simulation.temperatures[idx]));
@@ -290,6 +299,17 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
 
     // temp_to_replica[t] = replica index currently simulating temperature t
     let mut temp_to_replica: Vec<usize> = (0..n_temps).collect();
+
+    #[cfg(feature = "snapshots")]
+    let (mut equil_snapshots, mut measure_snapshots) = {
+        let mut equil = Vec::with_capacity(n_temps);
+        let mut meas = Vec::with_capacity(n_temps);
+        for _ in 0..n_temps {
+            equil.push(Vec::new());
+            meas.push(Vec::new());
+        }
+        (equil, meas)
+    };
 
     let pb = ProgressBar::new(total_steps as u64);
     maybe_hide_progress_bar(&pb, progress);
@@ -326,26 +346,48 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
                 }
             });
 
-        // PT swap between batches (serial)
-        for s in start..batch_end {
-            if s > 0 && s % pt_interval == 0 {
-                let mut rng = Pcg64Mcg::from_rng(&mut rand::rng());
-                let swap_start = (s / pt_interval) % 2;
-                for t in (swap_start..n_temps - 1).step_by(2) {
-                    let i = temp_to_replica[t];
-                    let j = temp_to_replica[t + 1];
-                    let e_i = grids[i].total_energy();
-                    let e_j = grids[j].total_energy();
-                    let beta_i = algos[i].beta();
-                    let beta_j = algos[j].beta();
-                    let delta = (e_i - e_j) * (beta_i - beta_j);
-                    if delta >= rng.random::<f64>().ln() {
-                        algos[i].set_beta(beta_j);
-                        algos[j].set_beta(beta_i);
-                        // Swap stats alongside temperatures so each Stats
-                        // object tracks the same temperature throughout.
-                        stats.swap(i, j);
-                        temp_to_replica.swap(t, t + 1);
+        // PT swap between batches (serial).
+        if batch_end < total_steps && batch_end.is_multiple_of(pt_interval) {
+            let mut rng = Pcg64Mcg::from_rng(&mut rand::rng());
+            let swap_start = (batch_end / pt_interval) % 2;
+            for t in (swap_start..n_temps - 1).step_by(2) {
+                let i = temp_to_replica[t];
+                let j = temp_to_replica[t + 1];
+                let e_i = grids[i].total_energy();
+                let e_j = grids[j].total_energy();
+                let beta_i = algos[i].beta();
+                let beta_j = algos[j].beta();
+                let delta = (e_i - e_j) * (beta_i - beta_j);
+                if delta >= rng.random::<f64>().ln() {
+                    algos[i].set_beta(beta_j);
+                    algos[j].set_beta(beta_i);
+                    // Swap stats alongside temperatures so each Stats
+                    // object tracks the same temperature throughout.
+                    stats.swap(i, j);
+                    temp_to_replica.swap(t, t + 1);
+                }
+            }
+        }
+
+        // Collect snapshots after batch + swap, grouped by temperature.
+        // Note: when pt_interval > snapshot_interval, intermediate snapshots
+        // within a batch are not captured.
+        #[cfg(feature = "snapshots")]
+        if let Some(snaps) = &config.snapshots {
+            let is_equil = batch_end <= equil_steps;
+            let interval = if is_equil {
+                snaps.equilibration_interval
+            } else {
+                snaps.measurement_interval
+            };
+            if interval > 0 && batch_end.is_multiple_of(interval) {
+                for t in 0..n_temps {
+                    let r = temp_to_replica[t];
+                    let snap = grids[r].spins_to_array();
+                    if is_equil {
+                        equil_snapshots[t].push(snap);
+                    } else {
+                        measure_snapshots[t].push(snap);
                     }
                 }
             }
@@ -363,6 +405,25 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
         }
     }
     pb.finish_with_message("done");
+
+    // Save snapshots by temperature (not by replica).
+    #[cfg(feature = "snapshots")]
+    if let Some(snaps) = &config.snapshots {
+        let snapshot_dir = &snaps.save_directory;
+        std::fs::create_dir_all(snapshot_dir).unwrap();
+        for t in 0..n_temps {
+            let file_name =
+                format!("{snapshot_dir}/T_{:.4}.npz", config.simulation.temperatures[t]);
+            match config::save_snapshots_to_npz(
+                &file_name,
+                &equil_snapshots[t],
+                &measure_snapshots[t],
+            ) {
+                Ok(_) => info!("Saved snapshots to file {file_name} successfully"),
+                Err(e) => info!("Failed to save snapshots to file {file_name} because {e}"),
+            };
+        }
+    }
 
     // Return results in temperature order.
     // After all swaps, stats[temp_to_replica[t]] holds data for temperature t.

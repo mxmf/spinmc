@@ -56,16 +56,28 @@ pub fn save_snapshots_to_npz(
 ) -> anyhow::Result<()> {
     fn stack_snapshots(
         arrays: &[ndarray::Array5<f64>],
+        fallback_shape: Option<[usize; 5]>,
     ) -> anyhow::Result<ndarray::ArrayD<f64>> {
         if arrays.is_empty() {
-            return Ok(ndarray::ArrayD::zeros(vec![0; 6]));
+            let [sub, x, y, z, components] = fallback_shape.unwrap_or([0, 0, 0, 0, 3]);
+            return Ok(ndarray::ArrayD::zeros(vec![
+                0, sub, x, y, z, components,
+            ]));
         }
         let views: Vec<_> = arrays.iter().map(|a| a.view()).collect();
         Ok(ndarray::stack(Axis(0), &views)?.into_dyn())
     }
 
-    let equil_stacked = stack_snapshots(equil_data)?;
-    let steps_stacked = stack_snapshots(steps_data)?;
+    let snapshot_shape = equil_data
+        .first()
+        .or_else(|| steps_data.first())
+        .map(|array| {
+            let shape = array.shape();
+            [shape[0], shape[1], shape[2], shape[3], shape[4]]
+        });
+
+    let equil_stacked = stack_snapshots(equil_data, snapshot_shape)?;
+    let steps_stacked = stack_snapshots(steps_data, snapshot_shape)?;
 
     let mut npz = NpzWriter::new_compressed(File::create(filename)?);
     npz.add_array("equil", &equil_stacked)?;
