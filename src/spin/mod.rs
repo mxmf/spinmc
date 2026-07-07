@@ -11,24 +11,12 @@ pub use heisenberg::HeisenbergSpin;
 pub use ising::IsingSpin;
 pub use xy::XYSpin;
 
-#[cfg(not(feature = "snapshots"))]
-mod private {
-    pub trait H5Type {}
-    impl<T> H5Type for T {}
-}
-#[cfg(not(feature = "snapshots"))]
-use private::H5Type;
-
-#[cfg(feature = "snapshots")]
-use hdf5_metno::H5Type;
-
 pub trait SpinState:
     Default
     + Clone
     + Copy
     + Send
     + Sync
-    + H5Type
     + 'static
     + Add
     + AddAssign

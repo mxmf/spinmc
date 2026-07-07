@@ -8,7 +8,6 @@ use crate::spin::SpinState;
 
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(C)]
-#[cfg_attr(feature = "snapshots", derive(hdf5_metno::H5Type))]
 pub struct HeisenbergSpin {
     x: f64,
     y: f64,

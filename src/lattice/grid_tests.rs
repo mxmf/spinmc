@@ -853,3 +853,31 @@ energy = true
     assert_eq!(grid.size, 12);
     assert_eq!(grid.dim, [3, 2, 2]);
 }
+
+#[cfg(feature = "snapshots")]
+#[test]
+fn spins_to_array_shape() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let arr = grid.spins_to_array();
+    // [sublattice=1, x=2, y=2, z=1, component=3]
+    assert_eq!(arr.shape(), &[1, 2, 2, 1, 3]);
+}
+
+#[cfg(feature = "snapshots")]
+#[test]
+fn spins_to_array_ising_values() {
+    let config = minimal_config("");
+    let rng = SmallRng::seed_from_u64(0);
+    let grid: Grid<IsingSpin, SmallRng> = Grid::new(&config, rng).unwrap();
+    let arr = grid.spins_to_array();
+    // All spins initialized to +z (1.0 magnitude): to_array = [0, 0, 1.0]
+    for x in 0..2 {
+        for y in 0..2 {
+            assert!((arr[[0, x, y, 0, 0]] - 0.0).abs() < 1e-10);
+            assert!((arr[[0, x, y, 0, 1]] - 0.0).abs() < 1e-10);
+            assert!((arr[[0, x, y, 0, 2]] - 1.0).abs() < 1e-10);
+        }
+    }
+}

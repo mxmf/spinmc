@@ -28,6 +28,18 @@ fn unique_temp_file(prefix: &str) -> std::path::PathBuf {
     ))
 }
 
+#[cfg(feature = "snapshots")]
+fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "{prefix}_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ))
+}
+
 fn toml_basic_string(value: &str) -> String {
     let mut escaped = String::with_capacity(value.len() + 2);
     escaped.push('"');
@@ -363,6 +375,122 @@ group = [[0]]
     assert!(result_lines[0].starts_with("1.000000"));
     // Clean up
     let _ = std::fs::remove_file(savefile);
+}
+
+#[cfg(feature = "snapshots")]
+#[test]
+fn run_end_to_end_independent_writes_npz_snapshots() {
+    let savefile = unique_temp_file("spinmc_snapshot_result");
+    let snapshot_dir = unique_temp_dir("spinmc_independent_snapshots");
+    let savefile_toml = toml_basic_string(savefile.to_str().unwrap());
+    let snapshot_dir_toml = toml_basic_string(snapshot_dir.to_str().unwrap());
+    let toml = format!(
+        r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 2
+measurement_steps = 3
+temperatures = [1.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0], [0, 1, 0]]
+strength = 1.0
+
+[output]
+energy = true
+savefile = {savefile_toml}
+group = [[0]]
+
+[snapshots]
+equilibration_interval = 1
+measurement_interval = 1
+save_directory = {snapshot_dir_toml}
+"#
+    );
+
+    run(&toml).unwrap();
+
+    let snapshot_file = snapshot_dir.join("T_1.0000.npz");
+    let mut reader =
+        ndarray_npy::NpzReader::new(std::fs::File::open(&snapshot_file).unwrap()).unwrap();
+    let equil: ndarray::ArrayD<f64> = reader.by_name("equil").unwrap();
+    let steps: ndarray::ArrayD<f64> = reader.by_name("steps").unwrap();
+    assert_eq!(equil.shape(), &[2, 1, 2, 2, 1, 3]);
+    assert_eq!(steps.shape(), &[3, 1, 2, 2, 1, 3]);
+
+    let _ = std::fs::remove_file(savefile);
+    let _ = std::fs::remove_dir_all(snapshot_dir);
+}
+
+#[cfg(feature = "snapshots")]
+#[test]
+fn run_end_to_end_pt_writes_temperature_npz_snapshots() {
+    let savefile = unique_temp_file("spinmc_pt_snapshot_result");
+    let snapshot_dir = unique_temp_dir("spinmc_pt_snapshots");
+    let savefile_toml = toml_basic_string(savefile.to_str().unwrap());
+    let snapshot_dir_toml = toml_basic_string(snapshot_dir.to_str().unwrap());
+    let toml = format!(
+        r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 2
+measurement_steps = 2
+temperatures = [1.0, 2.0]
+num_threads = 1
+pt_interval = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0], [0, 1, 0]]
+strength = 1.0
+
+[output]
+energy = true
+stats_interval = 1
+savefile = {savefile_toml}
+group = [[0]]
+
+[snapshots]
+equilibration_interval = 1
+measurement_interval = 1
+save_directory = {snapshot_dir_toml}
+"#
+    );
+
+    run(&toml).unwrap();
+
+    for temperature in ["1.0000", "2.0000"] {
+        let snapshot_file = snapshot_dir.join(format!("T_{temperature}.npz"));
+        let mut reader =
+            ndarray_npy::NpzReader::new(std::fs::File::open(&snapshot_file).unwrap()).unwrap();
+        let equil: ndarray::ArrayD<f64> = reader.by_name("equil").unwrap();
+        let steps: ndarray::ArrayD<f64> = reader.by_name("steps").unwrap();
+        assert_eq!(equil.shape(), &[2, 1, 2, 2, 1, 3]);
+        assert_eq!(steps.shape(), &[2, 1, 2, 2, 1, 3]);
+    }
+
+    let _ = std::fs::remove_file(savefile);
+    let _ = std::fs::remove_dir_all(snapshot_dir);
 }
 
 #[test]

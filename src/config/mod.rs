@@ -20,7 +20,7 @@ mod snapshots;
 #[cfg(feature = "snapshots")]
 pub use snapshots::Snapshots;
 #[cfg(feature = "snapshots")]
-pub use snapshots::save_snapshots_to_hdf5;
+pub use snapshots::save_snapshots_to_npz;
 
 use crate::config::structure::StructureConf;
 
