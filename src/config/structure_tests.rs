@@ -28,10 +28,31 @@ fn parse_from_poscar_with_magnetic_indices() {
         cell: None,
         positions: None,
         tolerance: Some(0.01),
-        magnetic_indices: Some(vec![0, 1]), // only Cr atoms
+        magnetic_indices: Some(vec![6, 7]), // only Cr atoms
     };
     let parsed = sc.parse().unwrap();
     assert_eq!(parsed.positions.len(), 2);
+    let full_structure = parsed.full_structure.as_ref().unwrap();
+    assert_eq!(full_structure.atoms.len(), 8);
+    assert_eq!(full_structure.atoms[0].element, "I");
+    assert_eq!(full_structure.atoms[7].element, "Cr");
+    assert_eq!(parsed.positions[0], full_structure.atoms[6].position);
+}
+
+#[test]
+fn parse_from_poscar_without_magnetic_indices_keeps_full_structure() {
+    let sc = StructureConf {
+        file: Some(poscar_path()),
+        format: None,
+        cell: None,
+        positions: None,
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let s = sc.parse().unwrap();
+    let full_structure = s.full_structure.as_ref().unwrap();
+    assert_eq!(full_structure.cell, s.cell);
+    assert_eq!(full_structure.atoms.len(), s.positions.len());
 }
 
 #[test]
@@ -88,7 +109,7 @@ fn validate_file_mode_without_magnetic_indices_positions_mismatch() {
     };
     // CrI3 has 8 atoms, sublattices=5 -> mismatch
     let err = sc.validate(5).unwrap_err().to_string();
-    assert!(err.contains("number of atoms in file"));
+    assert!(err.contains("number of atoms"));
 }
 
 #[test]
@@ -119,6 +140,23 @@ fn parse_cell_and_positions_ok() {
     assert_eq!(s.cell.len(), 3);
     assert_eq!(s.positions.len(), 2);
     assert_eq!(s.tolerance, Some(0.01));
+}
+
+#[test]
+fn parse_cell_and_positions_uses_placeholder_elements_in_full_structure() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let s = sc.parse().unwrap();
+    let full_structure = s.full_structure.as_ref().unwrap();
+    assert_eq!(full_structure.cell, s.cell);
+    assert_eq!(full_structure.atoms.len(), 2);
+    assert!(full_structure.atoms.iter().all(|atom| atom.element == "X"));
 }
 
 #[test]
@@ -206,17 +244,46 @@ fn parse_positions_without_cell_errors() {
 }
 
 #[test]
-fn parse_magnetic_indices_with_cell_errors() {
+fn parse_magnetic_indices_with_cell_filters_positions() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        tolerance: None,
+        magnetic_indices: Some(vec![0]),
+    };
+    let s = sc.parse().unwrap();
+    assert_eq!(s.positions.len(), 1);
+    assert_eq!(s.full_structure.as_ref().unwrap().atoms.len(), 2);
+}
+
+#[test]
+fn parse_magnetic_indices_with_cell_out_of_range_errors() {
     let sc = StructureConf {
         file: None,
         format: None,
         cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
         positions: Some(vec![[0.0, 0.0, 0.0]]),
         tolerance: None,
-        magnetic_indices: Some(vec![0]),
+        magnetic_indices: Some(vec![5]),
     };
     let err = sc.parse().unwrap_err().to_string();
-    assert!(err.contains("`magnetic_indices` is only valid"));
+    assert!(err.contains("out of range"));
+}
+
+#[test]
+fn parse_magnetic_indices_with_cell_duplicate_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        tolerance: None,
+        magnetic_indices: Some(vec![0, 0]),
+    };
+    let err = sc.parse().unwrap_err().to_string();
+    assert!(err.contains("duplicate"));
 }
 
 #[test]
@@ -257,6 +324,19 @@ fn validate_cell_mode_ok() {
         positions: Some(vec![[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
         tolerance: None,
         magnetic_indices: None,
+    };
+    assert!(sc.validate(2).is_ok());
+}
+
+#[test]
+fn validate_cell_mode_with_magnetic_indices_allows_extra_positions() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [0.25, 0.25, 0.25]]),
+        tolerance: None,
+        magnetic_indices: Some(vec![0, 2]),
     };
     assert!(sc.validate(2).is_ok());
 }

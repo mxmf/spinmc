@@ -71,6 +71,7 @@ Direct
     );
     assert_eq!(s.cell, [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
     assert_eq!(s.positions.len(), 1);
+    assert_eq!(s.full_structure.as_ref().unwrap().atoms[0].element, "X");
     assert!((s.positions[0][0] - 0.5).abs() < 1e-10);
     assert!((s.positions[0][1] - 0.5).abs() < 1e-10);
     assert!((s.positions[0][2] - 0.5).abs() < 1e-10);
@@ -130,6 +131,9 @@ Direct
 ",
     );
     assert_eq!(s.positions.len(), 2);
+    let atoms = &s.full_structure.as_ref().unwrap().atoms;
+    assert_eq!(atoms[0].element, "X");
+    assert_eq!(atoms[1].element, "X");
     assert!((s.positions[0][0] - 0.0).abs() < 1e-10);
     assert!((s.positions[1][0] - 0.5).abs() < 1e-10);
 }
@@ -151,6 +155,9 @@ Direct
 ",
     );
     assert_eq!(s.positions.len(), 2);
+    let atoms = &s.full_structure.as_ref().unwrap().atoms;
+    assert_eq!(atoms[0].element, "B");
+    assert_eq!(atoms[1].element, "N");
     assert!((s.positions[0][0] - 0.0).abs() < 1e-10);
     assert!((s.positions[1][0] - 0.25).abs() < 1e-10);
 }
