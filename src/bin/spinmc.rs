@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(tracing::Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber)?;
 
     let args = Args::parse();
     if let Some(Commands::Run { input }) = &args.command {

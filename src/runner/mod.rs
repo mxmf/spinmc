@@ -1,3 +1,5 @@
+#[cfg(feature = "snapshots")]
+use anyhow::Context;
 use indicatif::{
     MultiProgress, ParallelProgressIterator, ProgressBar, ProgressDrawTarget, ProgressStyle,
 };
@@ -115,6 +117,13 @@ fn maybe_hide_progress_bar(pb: &ProgressBar, progress: ProgressConfig) {
     }
 }
 
+fn progress_style(template: &str, chars: &str) -> ProgressStyle {
+    match ProgressStyle::default_bar().template(template) {
+        Ok(style) => style.progress_chars(chars),
+        Err(_) => ProgressStyle::default_bar().progress_chars(chars),
+    }
+}
+
 fn build_systems<S: SpinState>(
     config: &Config,
     stats_config: &StatsConfig,
@@ -153,7 +162,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
     stats: Vec<Stats<S>>,
     algos: Vec<AnyMC<R>>,
     grids: Vec<Grid<S, R>>,
-) -> Vec<StatResult> {
+) -> anyhow::Result<Vec<StatResult>> {
     let equil_steps = config.simulation.equilibration_steps;
     let meas_steps = config.simulation.measurement_steps;
     let stats_interval = config.output.stats_interval;
@@ -165,22 +174,18 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
     let multi = MultiProgress::new();
     let pb = multi.add(ProgressBar::new(stats.len() as u64));
     maybe_hide_progress_bar(&pb, progress);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} temperatures")
-            .unwrap()
-            .progress_chars("#>-"),
-    );
+    pb.set_style(progress_style(
+        "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} temperatures",
+        "#>-",
+    ));
     let sub_pbs: Vec<ProgressBar> = (0..num_threads)
         .map(|i| {
             let sp = multi.insert(i + 1, ProgressBar::new(total_steps as u64));
             maybe_hide_progress_bar(&sp, progress);
-            sp.set_style(
-                ProgressStyle::default_bar()
-                    .template("  {msg} [{elapsed_precise}/{eta}] [{bar:20.cyan/dim}] {pos}/{len}")
-                    .unwrap()
-                    .progress_chars("█░"),
-            );
+            sp.set_style(progress_style(
+                "  {msg} [{elapsed_precise}/{eta}] [{bar:20.cyan/dim}] {pos}/{len}",
+                "█░",
+            ));
             sp
         })
         .collect();
@@ -192,7 +197,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
         .zip(grids.into_par_iter())
         .progress_with(pb)
         .enumerate()
-        .map(|(idx, ((mut stat, mut mc), mut grid))| {
+        .map(|(idx, ((mut stat, mut mc), mut grid))| -> anyhow::Result<StatResult> {
             let bar_id = sub_counter.fetch_add(1, Ordering::Relaxed) % num_threads;
             let sub_pb = &sub_pbs[bar_id];
             sub_pb.reset();
@@ -258,7 +263,9 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
             #[cfg(feature = "snapshots")]
             if let Some(snapshots) = &config.snapshots {
                 let snapshot_dir = &snapshots.save_directory;
-                std::fs::create_dir_all(snapshot_dir).unwrap();
+                std::fs::create_dir_all(snapshot_dir).with_context(|| {
+                    format!("Failed to create snapshot directory: {snapshot_dir}")
+                })?;
                 let file_name = format!("{snapshot_dir}/T_{t:.4}.npz");
                 match config::save_snapshots_to_npz(
                     &file_name,
@@ -275,7 +282,7 @@ fn run_independent<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send>(
             sub_pb.set_position(total_steps as u64);
             sub_pb.finish_with_message(format!("T={:.4} ✓", config.simulation.temperatures[idx]));
 
-            stat.result()
+            Ok(stat.result())
         })
         .collect()
 }
@@ -289,7 +296,7 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
     stats: &mut [Stats<S>],
     algos: &mut [AnyMC<R>],
     grids: &mut [Grid<S, R>],
-) -> Vec<StatResult> {
+) -> anyhow::Result<Vec<StatResult>> {
     let n_temps = config.simulation.temperatures.len();
     let pt_interval = config.simulation.pt_interval;
     let equil_steps = config.simulation.equilibration_steps;
@@ -314,12 +321,10 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
 
     let pb = ProgressBar::new(total_steps as u64);
     maybe_hide_progress_bar(&pb, progress);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} sweeps ({eta})")
-            .unwrap()
-            .progress_chars("#>-"),
-    );
+    pb.set_style(progress_style(
+        "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} sweeps ({eta})",
+        "#>-",
+    ));
 
     let mut sweep = 0usize;
     while sweep < total_steps {
@@ -411,7 +416,8 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
     #[cfg(feature = "snapshots")]
     if let Some(snaps) = &config.snapshots {
         let snapshot_dir = &snaps.save_directory;
-        std::fs::create_dir_all(snapshot_dir).unwrap();
+        std::fs::create_dir_all(snapshot_dir)
+            .with_context(|| format!("Failed to create snapshot directory: {snapshot_dir}"))?;
         for t in 0..n_temps {
             let file_name = format!(
                 "{snapshot_dir}/T_{:.4}.npz",
@@ -431,12 +437,12 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
 
     // Return results in temperature order.
     // After all swaps, stats[temp_to_replica[t]] holds data for temperature t.
-    (0..n_temps)
+    Ok((0..n_temps)
         .map(|t| {
             let r = temp_to_replica[t];
             stats[r].result()
         })
-        .collect()
+        .collect())
 }
 
 // Dispatch
@@ -455,10 +461,10 @@ fn run_simulations<S: SpinState>(
             "PT enabled, swap every {} sweeps",
             config.simulation.pt_interval
         );
-        Ok(run_pt(config, &mut stats, &mut algos, &mut grids))
+        run_pt(config, &mut stats, &mut algos, &mut grids)
     } else {
         info!("Non-PT mode, independent temperatures");
-        Ok(run_independent(config, stats, algos, grids))
+        run_independent(config, stats, algos, grids)
     }
 }
 

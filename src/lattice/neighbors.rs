@@ -196,7 +196,7 @@ impl Atoms {
     fn get_neighbor_from(&self, mut neighbors: Vec<Distance>, order: usize) -> Vec<Neighbor> {
         let mut result = vec![];
 
-        neighbors.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap());
+        neighbors.sort_by(|a, b| a.distance.total_cmp(&b.distance));
 
         let mut current_order = 0;
         let mut last_distance = 0.;
