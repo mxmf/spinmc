@@ -56,7 +56,7 @@ magnetization_abs = true   # M = ⟨|Σ s_i|⟩ / N : Absolute magnetization per
 susceptibility_abs = true  # χ(|M|) = (⟨|M|²⟩ - ⟨|M|⟩²) / (N kB T) : Susceptibility from absolute M (μB² / eV units)
 
 # Group-specific outputs
-group = []                   # Spin group definitions (indices are sublattice IDs;  e.g., [[0,1,2],[3,4,5]])
+group = [[0]]                # Spin group definitions (indices are sublattice IDs;  e.g., [[0,1,2],[3,4,5]])
 group_magnetization = true   # ⟨Σ s_g⟩ / N_g : Per-group magnetization (μB units)
 group_susceptibility = true  # (⟨M_g²⟩ - ⟨M_g⟩²) / (N_g kB T) : Per-group susceptibility (μB² / eV units)
 
@@ -109,7 +109,7 @@ neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
 strength = 1.0      # Exchange coupling constant J (eV)
 
 [[exchange]]
-from_sublattice = 1
+from_sublattice = 0
 neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
 strength = 1.0      # Exchange coupling constant J (eV)
 

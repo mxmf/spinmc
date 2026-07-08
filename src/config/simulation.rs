@@ -40,6 +40,26 @@ pub struct TemperatureRange {
 
 impl Simulation {
     pub fn validate(&mut self) -> anyhow::Result<()> {
+        if self
+            .equilibration_steps
+            .checked_add(self.measurement_steps)
+            .is_none()
+        {
+            anyhow::bail!("equilibration_steps plus measurement_steps is too large");
+        }
+        if self.measurement_steps == 0 {
+            anyhow::bail!("measurement_steps must be greater than zero");
+        }
+        if self.num_threads == 0 {
+            anyhow::bail!("num_threads must be greater than zero");
+        }
+        if !self.boltzmann_constant.is_finite() || self.boltzmann_constant <= 0.0 {
+            anyhow::bail!(
+                "boltzmann_constant ({}) must be finite and greater than zero",
+                self.boltzmann_constant
+            );
+        }
+
         match (
             self.temperatures.is_empty(),
             self.temperature_range.is_empty(),
@@ -55,6 +75,20 @@ impl Simulation {
             (true, false) => {
                 for tem_range in &self.temperature_range {
                     let (start, end, step) = (tem_range.start, tem_range.end, tem_range.step);
+                    if !start.is_finite() {
+                        anyhow::bail!("temperature_range start ({start}) must be finite");
+                    }
+                    if !end.is_finite() {
+                        anyhow::bail!("temperature_range end ({end}) must be finite");
+                    }
+                    if !step.is_finite() {
+                        anyhow::bail!("temperature_range step ({step}) must be finite");
+                    }
+                    if start <= 0.0 {
+                        anyhow::bail!(
+                            "temperature_range start ({start}) must be greater than zero"
+                        );
+                    }
                     if step <= 0.0 {
                         anyhow::bail!("temperature_range step ({step}) must be positive");
                     }
@@ -69,9 +103,28 @@ impl Simulation {
                         t += step;
                     }
                 }
+                if self.pt_interval > 0 && self.temperatures.len() < 2 {
+                    anyhow::bail!(
+                        "parallel tempering requires at least two temperatures when pt_interval is greater than zero"
+                    );
+                }
                 Ok(())
             }
-            (false, true) => Ok(()),
+            (false, true) => {
+                for (index, temperature) in self.temperatures.iter().enumerate() {
+                    if !temperature.is_finite() || *temperature <= 0.0 {
+                        anyhow::bail!(
+                            "temperatures[{index}] ({temperature}) must be finite and greater than zero"
+                        );
+                    }
+                }
+                if self.pt_interval > 0 && self.temperatures.len() < 2 {
+                    anyhow::bail!(
+                        "parallel tempering requires at least two temperatures when pt_interval is greater than zero"
+                    );
+                }
+                Ok(())
+            }
         }
     }
 }

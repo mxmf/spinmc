@@ -342,6 +342,183 @@ fn validate_cell_mode_with_magnetic_indices_allows_extra_positions() {
 }
 
 #[test]
+fn validate_empty_file_path_errors() {
+    let sc = StructureConf {
+        file: Some("  ".into()),
+        format: None,
+        cell: None,
+        positions: None,
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("file path"));
+    assert!(err.contains("empty"));
+}
+
+#[test]
+fn validate_empty_format_errors() {
+    let sc = StructureConf {
+        file: Some("POSCAR".into()),
+        format: Some(" ".into()),
+        cell: None,
+        positions: None,
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("format"));
+    assert!(err.contains("empty"));
+}
+
+#[test]
+fn validate_unsupported_format_errors() {
+    let sc = StructureConf {
+        file: Some("structure.xyz".into()),
+        format: Some("xyz".into()),
+        cell: None,
+        positions: None,
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("unsupported"));
+    assert!(err.contains("xyz"));
+}
+
+#[test]
+fn validate_format_with_cell_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: Some("vasp".into()),
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0]]),
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("`format` is only valid"));
+}
+
+#[test]
+fn validate_non_finite_tolerance_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0]]),
+        tolerance: Some(f64::NAN),
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("tolerance"));
+    assert!(err.contains("finite"));
+}
+
+#[test]
+fn validate_negative_tolerance_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0]]),
+        tolerance: Some(-0.1),
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("tolerance"));
+    assert!(err.contains("non-negative"));
+}
+
+#[test]
+fn validate_non_finite_cell_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, f64::NAN, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0]]),
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("cell[0][1]"));
+    assert!(err.contains("finite"));
+}
+
+#[test]
+fn validate_zero_volume_cell_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0]]),
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("cell vectors"));
+    assert!(err.contains("non-zero volume"));
+}
+
+#[test]
+fn validate_empty_positions_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![]),
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("positions"));
+    assert!(err.contains("at least one"));
+}
+
+#[test]
+fn validate_non_finite_positions_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, f64::INFINITY, 0.0]]),
+        tolerance: None,
+        magnetic_indices: None,
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("positions[0][1]"));
+    assert!(err.contains("finite"));
+}
+
+#[test]
+fn validate_magnetic_indices_duplicate_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        tolerance: None,
+        magnetic_indices: Some(vec![0, 0]),
+    };
+    let err = sc.validate(2).unwrap_err().to_string();
+    assert!(err.contains("duplicate"));
+}
+
+#[test]
+fn validate_magnetic_indices_out_of_range_errors() {
+    let sc = StructureConf {
+        file: None,
+        format: None,
+        cell: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        positions: Some(vec![[0.0, 0.0, 0.0]]),
+        tolerance: None,
+        magnetic_indices: Some(vec![1]),
+    };
+    let err = sc.validate(1).unwrap_err().to_string();
+    assert!(err.contains("out of range"));
+}
+
+#[test]
 fn validate_magnetic_indices_length_mismatch() {
     let sc = StructureConf {
         file: None,

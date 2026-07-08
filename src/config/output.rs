@@ -53,7 +53,7 @@ fn default_stats_interval() -> usize {
 }
 
 impl Output {
-    pub fn validate(&self) -> anyhow::Result<()> {
+    pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
         if let (false, false, false, false, false, false, false, false, false, false) = (
             self.energy,
             self.heat_capacity,
@@ -67,6 +67,37 @@ impl Output {
             self.group_susceptibility_abs,
         ) {
             anyhow::bail!("No output fields specified: Please enable at least one observable.")
+        }
+
+        if self.savefile.trim().is_empty() {
+            anyhow::bail!("savefile must not be empty");
+        }
+
+        if self.stats_interval == 0 {
+            anyhow::bail!("stats_interval must be greater than zero");
+        }
+
+        let group_observable_enabled = self.group_magnetization
+            || self.group_susceptibility
+            || self.group_magnetization_abs
+            || self.group_susceptibility_abs;
+
+        if group_observable_enabled && self.group.is_empty() {
+            anyhow::bail!("group output requires at least one group");
+        }
+
+        for (group_index, group) in self.group.iter().enumerate() {
+            if group.is_empty() {
+                anyhow::bail!("group[{group_index}] must not be empty");
+            }
+
+            for &sublattice in group {
+                if sublattice >= sublattices {
+                    anyhow::bail!(
+                        "group[{group_index}] sublattice index ({sublattice}) is out of range, must be less than sublattices count ({sublattices})"
+                    );
+                }
+            }
         }
         Ok(())
     }

@@ -73,7 +73,7 @@ impl Config {
         if let Some(stru) = &self.structure {
             stru.validate(self.grid.sublattices)?;
         }
-        self.output.validate()?;
+        self.output.validate(self.grid.sublattices)?;
         #[cfg(feature = "snapshots")]
         if let Some(snap) = &self.snapshots {
             snap.validate()?;

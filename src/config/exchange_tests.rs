@@ -241,6 +241,96 @@ fn validate_multiple_specified_errors() {
 }
 
 #[test]
+fn validate_non_finite_strength_errors() {
+    for strength in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let e = Exchange {
+            from_sublattice: Some(0),
+            to_sublattice: Some(0),
+            offsets: Some(vec![[1, 0, 0]]),
+            neighbor_order: None,
+            distance_range: None,
+            strength,
+        };
+        let err = e.validate(1).unwrap_err().to_string();
+        assert!(err.contains("strength"));
+        assert!(err.contains("finite"));
+    }
+}
+
+#[test]
+fn validate_zero_strength_ok() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: Some(vec![[1, 0, 0]]),
+        neighbor_order: None,
+        distance_range: None,
+        strength: 0.0,
+    };
+    assert!(e.validate(1).is_ok());
+}
+
+#[test]
+fn validate_empty_offsets_errors() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: Some(vec![]),
+        neighbor_order: None,
+        distance_range: None,
+        strength: 1.0,
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("offsets"));
+    assert!(err.contains("at least one"));
+}
+
+#[test]
+fn validate_offsets_without_from_to_errors() {
+    let e = Exchange {
+        from_sublattice: None,
+        to_sublattice: None,
+        offsets: Some(vec![[1, 0, 0]]),
+        neighbor_order: None,
+        distance_range: None,
+        strength: 1.0,
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("from_sublattice"));
+    assert!(err.contains("to_sublattice"));
+}
+
+#[test]
+fn validate_neighbor_order_zero_errors() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: None,
+        neighbor_order: Some(0),
+        distance_range: None,
+        strength: 1.0,
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("neighbor_order"));
+    assert!(err.contains("greater than zero"));
+}
+
+#[test]
+fn validate_neighbor_order_to_without_from_errors() {
+    let e = Exchange {
+        from_sublattice: None,
+        to_sublattice: Some(0),
+        offsets: None,
+        neighbor_order: Some(1),
+        distance_range: None,
+        strength: 1.0,
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("from_sublattice"));
+    assert!(err.contains("neighbor_order"));
+}
+
+#[test]
 fn validate_from_sublattice_out_of_range() {
     let e = Exchange {
         from_sublattice: Some(2),
@@ -286,6 +376,26 @@ fn validate_distance_range_negative_min() {
 }
 
 #[test]
+fn validate_distance_range_non_finite_errors() {
+    for (distance_range, expected) in [
+        ([f64::NAN, 5.0], "minimum"),
+        ([0.0, f64::INFINITY], "maximum"),
+    ] {
+        let e = Exchange {
+            from_sublattice: Some(0),
+            to_sublattice: Some(0),
+            offsets: None,
+            neighbor_order: None,
+            distance_range: Some(distance_range),
+            strength: 1.0,
+        };
+        let err = e.validate(1).unwrap_err().to_string();
+        assert!(err.contains(expected));
+        assert!(err.contains("finite"));
+    }
+}
+
+#[test]
 fn validate_distance_range_max_less_than_min() {
     let e = Exchange {
         from_sublattice: Some(0),
@@ -298,6 +408,21 @@ fn validate_distance_range_max_less_than_min() {
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("maximum"));
     assert!(err.contains("minimum"));
+}
+
+#[test]
+fn validate_distance_range_to_without_from_errors() {
+    let e = Exchange {
+        from_sublattice: None,
+        to_sublattice: Some(0),
+        offsets: None,
+        neighbor_order: None,
+        distance_range: Some([0.0, 5.0]),
+        strength: 1.0,
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("from_sublattice"));
+    assert!(err.contains("distance_range"));
 }
 
 #[test]
