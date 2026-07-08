@@ -134,6 +134,10 @@ impl Exchange {
     }
 
     pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
+        if !self.strength.is_finite() {
+            anyhow::bail!("exchange strength ({}) must be finite", self.strength);
+        }
+
         let specified = self.offsets.is_some() as usize
             + self.neighbor_order.is_some() as usize
             + self.distance_range.is_some() as usize;
@@ -143,13 +147,46 @@ impl Exchange {
             );
         }
 
+        if let Some(offsets) = &self.offsets {
+            if offsets.is_empty() {
+                anyhow::bail!("offsets must contain at least one offset");
+            }
+            if self.from_sublattice.is_none() || self.to_sublattice.is_none() {
+                anyhow::bail!(
+                    "when using `offsets`, both `from_sublattice` and `to_sublattice` must be specified"
+                );
+            }
+        }
+
+        if let Some(neighbor_order) = self.neighbor_order {
+            if neighbor_order == 0 {
+                anyhow::bail!("neighbor_order must be greater than zero");
+            }
+            if self.from_sublattice.is_none() && self.to_sublattice.is_some() {
+                anyhow::bail!(
+                    "`from_sublattice` must be specified when using `neighbor_order` with `to_sublattice`"
+                );
+            }
+        }
+
         if let Some([min_distance, max_distance]) = self.distance_range {
+            if !min_distance.is_finite() {
+                anyhow::bail!("distance_range minimum ({min_distance}) must be finite");
+            }
+            if !max_distance.is_finite() {
+                anyhow::bail!("distance_range maximum ({max_distance}) must be finite");
+            }
             if min_distance < 0.0 {
                 anyhow::bail!("distance_range minimum ({min_distance}) must be non-negative");
             }
             if max_distance < min_distance {
                 anyhow::bail!(
                     "distance_range maximum ({max_distance}) must be greater than or equal to minimum ({min_distance})"
+                );
+            }
+            if self.from_sublattice.is_none() && self.to_sublattice.is_some() {
+                anyhow::bail!(
+                    "`from_sublattice` must be specified when using `distance_range` with `to_sublattice`"
                 );
             }
         }

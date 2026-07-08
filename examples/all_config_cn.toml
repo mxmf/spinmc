@@ -108,7 +108,7 @@ neighbor_order = 1  # 配位壳编号（1=最近邻，2=次近邻，等等）
 strength = 1.0      # 交换常数 J（eV）
 
 [[exchange]]
-from_sublattice = 1
+from_sublattice = 0
 neighbor_order = 1  # 配位壳编号（1=最近邻，2=次近邻，等等）
 strength = 1.0      # 交换常数 J（eV）
 

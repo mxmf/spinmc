@@ -109,7 +109,7 @@ neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
 strength = 1.0      # Exchange coupling constant J (eV)
 
 [[exchange]]
-from_sublattice = 1
+from_sublattice = 0
 neighbor_order = 1  # Coordination shell (1=nearest, 2=next-nearest etc.)
 strength = 1.0      # Exchange coupling constant J (eV)
 
