@@ -252,6 +252,40 @@ group = [[0]]
 }
 
 #[test]
+fn build_systems_zero_temperature_uses_infinite_beta() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 10
+measurement_steps = 10
+temperatures = [0.0]
+num_threads = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0], [0, 1, 0]]
+strength = 1.0
+
+[output]
+energy = true
+group = [[0]]
+"#;
+    let config = Config::new(toml).unwrap();
+    let stats_config = energy_stats_config(1);
+    let sys = build_systems::<IsingSpin>(&config, &stats_config).unwrap();
+    assert!(sys.algos[0].beta().is_infinite());
+}
+
+#[test]
 fn build_systems_wolff_algorithm() {
     let toml = r#"
 [simulation]
@@ -328,6 +362,82 @@ group = [[0]]
         results
             .iter()
             .all(|result| result.energy.unwrap().is_finite())
+    );
+}
+
+#[test]
+fn accepts_parallel_tempering_swap_handles_zero_temperature_limits() {
+    assert!(accepts_parallel_tempering_swap(
+        2.0,
+        1.0,
+        f64::INFINITY,
+        1.0,
+        0.5
+    ));
+    assert!(!accepts_parallel_tempering_swap(
+        1.0,
+        2.0,
+        f64::INFINITY,
+        1.0,
+        0.5
+    ));
+    assert!(!accepts_parallel_tempering_swap(
+        1.0,
+        1.0,
+        f64::INFINITY,
+        1.0,
+        0.5
+    ));
+    assert!(!accepts_parallel_tempering_swap(
+        1.0,
+        2.0,
+        f64::INFINITY,
+        f64::INFINITY,
+        0.5
+    ));
+}
+
+#[test]
+fn run_simulations_parallel_tempering_allows_zero_temperature() {
+    let toml = r#"
+[simulation]
+initial_state = "z"
+model = "ising"
+equilibration_steps = 2
+measurement_steps = 3
+temperatures = [0.0, 1.0]
+num_threads = 1
+pt_interval = 1
+algorithm = "metropolis"
+
+[grid]
+dimensions = [2, 2, 1]
+sublattices = 1
+spin_magnitudes = [1.0]
+periodic_boundary = [true, true, true]
+
+[[exchange]]
+from_sublattice = 0
+to_sublattice = 0
+offsets = [[1, 0, 0], [0, 1, 0]]
+strength = 1.0
+
+[output]
+energy = true
+stats_interval = 1
+group = [[0]]
+"#;
+    let config = Config::new(toml).unwrap();
+    let stats_config = energy_stats_config(1);
+    let results = run_simulations::<IsingSpin>(&config, &stats_config).unwrap();
+
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0].t, 0.0);
+    assert_eq!(results[1].t, 1.0);
+    assert!(
+        results
+            .iter()
+            .all(|result| result.energy.is_some_and(f64::is_finite))
     );
 }
 

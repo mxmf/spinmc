@@ -136,7 +136,7 @@ fn build_systems<S: SpinState>(
     let mut algos = Vec::new();
 
     for &t in &config.simulation.temperatures {
-        let beta = 1.0 / (kb * t);
+        let beta = beta_from_temperature(kb, t);
         let rng = Pcg64Mcg::from_rng(&mut rand::rng());
         let grid = Grid::<S, Pcg64Mcg>::new(config, rng.clone())?;
         let mc = match config.simulation.algorithm {
@@ -156,6 +156,14 @@ fn build_systems<S: SpinState>(
         grids,
         algos,
     })
+}
+
+fn beta_from_temperature(kb: f64, temperature: f64) -> f64 {
+    if temperature == 0.0 {
+        f64::INFINITY
+    } else {
+        1.0 / (kb * temperature)
+    }
 }
 
 // Non-PT: into_par_iter().map() — each thread owns its data
@@ -365,8 +373,7 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
                 let e_j = grids[j].total_energy();
                 let beta_i = algos[i].beta();
                 let beta_j = algos[j].beta();
-                let delta = (e_i - e_j) * (beta_i - beta_j);
-                if delta >= rng.random::<f64>().ln() {
+                if accepts_parallel_tempering_swap(e_i, e_j, beta_i, beta_j, rng.random::<f64>()) {
                     algos[i].set_beta(beta_j);
                     algos[j].set_beta(beta_i);
                     // Swap stats alongside temperatures so each Stats
@@ -445,6 +452,22 @@ fn run_pt<S: SpinState, R: rand::Rng + Clone + SeedableRng + Send + Sync>(
             stats[r].result()
         })
         .collect())
+}
+
+fn accepts_parallel_tempering_swap(
+    energy_i: f64,
+    energy_j: f64,
+    beta_i: f64,
+    beta_j: f64,
+    random: f64,
+) -> bool {
+    let energy_delta = energy_i - energy_j;
+    match (beta_i.is_infinite(), beta_j.is_infinite()) {
+        (true, true) => false,
+        (true, false) => energy_delta > 0.0,
+        (false, true) => energy_delta < 0.0,
+        (false, false) => energy_delta * (beta_i - beta_j) >= random.ln(),
+    }
 }
 
 // Dispatch

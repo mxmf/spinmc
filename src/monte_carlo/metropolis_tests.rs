@@ -147,3 +147,24 @@ fn metropolis_zero_exchange_accepts_all_moves() {
         assert!((before + after).abs() < 1e-10);
     }
 }
+
+#[test]
+fn metropolis_zero_temperature_rejects_equal_energy_moves() {
+    let mut grid = make_ferro_grid();
+    for calc_input in &mut grid.calc_inputs {
+        calc_input.exchanges.fill(0.0);
+        if let Some(neighbors) = &mut calc_input.exchange_neighbors {
+            for (_, j) in neighbors {
+                *j = 0.0;
+            }
+        }
+    }
+    let spins_before: Vec<_> = grid.spins.iter().map(|s| s.to_array()[2]).collect();
+    let mut mc = Metropolis {
+        rng: SmallRng::seed_from_u64(1),
+        beta: f64::INFINITY,
+    };
+    mc.step(&mut grid);
+    let spins_after: Vec<_> = grid.spins.iter().map(|s| s.to_array()[2]).collect();
+    assert_eq!(spins_after, spins_before);
+}
