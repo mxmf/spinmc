@@ -31,6 +31,52 @@ fn validate_strength_length_not_equal_sublattices() {
 }
 
 #[test]
+fn validate_zero_length_axis_errors() {
+    let a = Anisotropy {
+        axis: vec![[0.0, 0.0, 0.0]],
+        strength: vec![1.0],
+    };
+    let err = a.validate(1).unwrap_err().to_string();
+    assert!(err.contains("axis[0]"));
+    assert!(err.contains("non-zero length"));
+}
+
+#[test]
+fn validate_non_finite_axis_errors() {
+    for component in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let a = Anisotropy {
+            axis: vec![[0.0, component, 1.0]],
+            strength: vec![1.0],
+        };
+        let err = a.validate(1).unwrap_err().to_string();
+        assert!(err.contains("axis[0][1]"));
+        assert!(err.contains("finite"));
+    }
+}
+
+#[test]
+fn validate_non_finite_strength_errors() {
+    for strength in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let a = Anisotropy {
+            axis: vec![[0.0, 0.0, 1.0]],
+            strength: vec![strength],
+        };
+        let err = a.validate(1).unwrap_err().to_string();
+        assert!(err.contains("strength[0]"));
+        assert!(err.contains("finite"));
+    }
+}
+
+#[test]
+fn validate_zero_strength_ok() {
+    let a = Anisotropy {
+        axis: vec![[0.0, 0.0, 1.0]],
+        strength: vec![0.0],
+    };
+    assert!(a.validate(1).is_ok());
+}
+
+#[test]
 fn parse_normalizes_axis() {
     let a = Anisotropy {
         axis: vec![[2.0, 0.0, 0.0]],

@@ -23,6 +23,24 @@ impl Anisotropy {
                 "anisotropy strength arrays must have the same length with {sublattices}"
             );
         }
+        for (index, axis) in self.axis.iter().enumerate() {
+            for (component_index, component) in axis.iter().enumerate() {
+                if !component.is_finite() {
+                    anyhow::bail!(
+                        "anisotropy axis[{index}][{component_index}] ({component}) must be finite"
+                    );
+                }
+            }
+            let axis_norm = (axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]).sqrt();
+            if axis_norm == 0.0 {
+                anyhow::bail!("anisotropy axis[{index}] must have non-zero length");
+            }
+        }
+        for (index, strength) in self.strength.iter().enumerate() {
+            if !strength.is_finite() {
+                anyhow::bail!("anisotropy strength[{index}] ({strength}) must be finite");
+            }
+        }
         Ok(())
     }
 
