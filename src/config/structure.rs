@@ -14,6 +14,81 @@ pub struct StructureConf {
 }
 
 impl StructureConf {
+    fn validate_cell(cell: [[f64; 3]; 3]) -> anyhow::Result<()> {
+        for (row_index, row) in cell.iter().enumerate() {
+            for (component_index, component) in row.iter().enumerate() {
+                if !component.is_finite() {
+                    anyhow::bail!(
+                        "cell[{row_index}][{component_index}] ({component}) must be finite"
+                    );
+                }
+            }
+        }
+
+        let volume = cell[0][0] * (cell[1][1] * cell[2][2] - cell[1][2] * cell[2][1])
+            - cell[0][1] * (cell[1][0] * cell[2][2] - cell[1][2] * cell[2][0])
+            + cell[0][2] * (cell[1][0] * cell[2][1] - cell[1][1] * cell[2][0]);
+        if volume.abs() <= f64::EPSILON {
+            anyhow::bail!("cell vectors must define a non-zero volume");
+        }
+
+        Ok(())
+    }
+
+    fn validate_positions(positions: &[[f64; 3]]) -> anyhow::Result<()> {
+        if positions.is_empty() {
+            anyhow::bail!("positions must contain at least one position");
+        }
+
+        for (position_index, position) in positions.iter().enumerate() {
+            for (component_index, component) in position.iter().enumerate() {
+                if !component.is_finite() {
+                    anyhow::bail!(
+                        "positions[{position_index}][{component_index}] ({component}) must be finite"
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_magnetic_indices(
+        indices: &[u64],
+        positions_len: Option<usize>,
+    ) -> anyhow::Result<()> {
+        let mut seen = std::collections::HashSet::new();
+        for &index in indices {
+            if !seen.insert(index) {
+                anyhow::bail!("magnetic_indices contains duplicate index {index}");
+            }
+            if let Some(positions_len) = positions_len
+                && index as usize >= positions_len
+            {
+                anyhow::bail!(
+                    "magnetic_indices contains index {index} which is out of range, only {positions_len} atoms provided"
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_format(format: &str) -> anyhow::Result<()> {
+        if format.trim().is_empty() {
+            anyhow::bail!("format must not be empty");
+        }
+        if !matches!(
+            format.to_ascii_lowercase().as_str(),
+            "poscar" | "vasp" | "contcar"
+        ) {
+            anyhow::bail!(
+                "unsupported structure format `{format}`; only POSCAR/CONTCAR/VASP are supported"
+            );
+        }
+        Ok(())
+    }
+
     pub fn parse(&self) -> anyhow::Result<Structure> {
         match (&self.file, &self.cell, &self.positions) {
             (Some(file), None, None) => {
@@ -97,6 +172,39 @@ impl StructureConf {
     }
 
     pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
+        if let Some(file) = &self.file
+            && file.trim().is_empty()
+        {
+            anyhow::bail!("structure file path must not be empty");
+        }
+
+        if let Some(format) = &self.format {
+            Self::validate_format(format)?;
+            if self.file.is_none() {
+                anyhow::bail!("`format` is only valid when loading from a `file`");
+            }
+        }
+
+        if let Some(tolerance) = self.tolerance
+            && (!tolerance.is_finite() || tolerance < 0.0)
+        {
+            anyhow::bail!("tolerance ({tolerance}) must be finite and non-negative");
+        }
+
+        if let Some(cell) = self.cell {
+            Self::validate_cell(cell)?;
+        }
+
+        if let Some(positions) = &self.positions {
+            Self::validate_positions(positions)?;
+        }
+
+        if let (Some(indices), Some(positions)) = (&self.magnetic_indices, &self.positions) {
+            Self::validate_magnetic_indices(indices, Some(positions.len()))?;
+        } else if let Some(indices) = &self.magnetic_indices {
+            Self::validate_magnetic_indices(indices, None)?;
+        }
+
         if let (None, Some(_), Some(positions)) = (&self.file, &self.cell, &self.positions)
             && self.magnetic_indices.is_none()
             && positions.len() != sublattices
