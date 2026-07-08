@@ -81,7 +81,7 @@ temperature_range = [
 ]
 
 [output]
-outfile = "result.txt"
+savefile = "result.txt"
 energy = true
 heat_capacity = true
 magnetization = true
