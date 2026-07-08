@@ -1,4 +1,3 @@
-#[cfg(feature = "snapshots")]
 use anyhow::Context;
 use indicatif::{
     MultiProgress, ParallelProgressIterator, ProgressBar, ProgressDrawTarget, ProgressStyle,
@@ -38,17 +37,13 @@ pub fn run(content: &str) -> anyhow::Result<()> {
         group_num: run_config.output.group.len(),
     };
 
-    // Rayon allows the global pool to be initialized only once per process.
-    // Reuse the existing pool when tests or callers invoke `run` repeatedly.
-    let _ = ThreadPoolBuilder::new()
-        .num_threads(run_config.simulation.num_threads)
-        .build_global();
+    let pool = build_thread_pool(run_config.simulation.num_threads)?;
 
-    let results = match run_config.simulation.model {
+    let results = pool.install(|| match run_config.simulation.model {
         config::Model::Ising => run_simulations::<IsingSpin>(&run_config, &stats_config),
         config::Model::Xy => run_simulations::<XYSpin>(&run_config, &stats_config),
         config::Model::Heisenberg => run_simulations::<HeisenbergSpin>(&run_config, &stats_config),
-    }?;
+    })?;
 
     let file = File::create(&run_config.output.savefile)?;
 
@@ -65,6 +60,13 @@ pub fn run(content: &str) -> anyhow::Result<()> {
         run_config.output.savefile
     );
     Ok(())
+}
+
+fn build_thread_pool(num_threads: usize) -> anyhow::Result<rayon::ThreadPool> {
+    ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .context("Failed to build Rayon thread pool")
 }
 
 struct Systems<S: SpinState> {
