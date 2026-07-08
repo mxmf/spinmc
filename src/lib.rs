@@ -20,11 +20,11 @@ use tracing_subscriber::FmtSubscriber;
 #[cfg(feature = "python-extension")]
 #[pyfunction]
 fn run_from_py(content: &str) -> PyResult<()> {
-    ctrlc::set_handler(|| std::process::exit(2)).unwrap();
+    let _ = ctrlc::set_handler(|| std::process::exit(2));
     let subscriber = FmtSubscriber::builder()
         .with_max_level(tracing::Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    let _ = tracing::subscriber::set_global_default(subscriber);
     run(content).map_err(|e| PyValueError::new_err(e.to_string()))?;
     Ok(())
 }

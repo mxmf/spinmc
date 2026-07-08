@@ -377,6 +377,15 @@ group = [[0]]
     let _ = std::fs::remove_file(savefile);
 }
 
+#[test]
+fn build_thread_pool_uses_configured_num_threads() {
+    let one = build_thread_pool(1).unwrap();
+    assert_eq!(one.current_num_threads(), 1);
+
+    let two = build_thread_pool(2).unwrap();
+    assert_eq!(two.current_num_threads(), 2);
+}
+
 #[cfg(feature = "snapshots")]
 #[test]
 fn run_end_to_end_independent_writes_npz_snapshots() {
