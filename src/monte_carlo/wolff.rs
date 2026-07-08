@@ -64,7 +64,7 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
                 )
             }
 
-            if delta_e >= 0.0 && self.rng.random::<f64>() > (-self.beta * delta_e).exp() {
+            if rejects_wolff_anisotropy_flip(delta_e, self.beta, &mut self.rng) {
                 return 0;
             }
         }
@@ -82,6 +82,16 @@ impl<S: SpinState, R: rand::Rng> MonteCarlo<S, R> for Wolff<R> {
         // }
 
         cluster.len()
+    }
+}
+
+fn rejects_wolff_anisotropy_flip<R: rand::Rng>(delta_e: f64, beta: f64, rng: &mut R) -> bool {
+    if delta_e < 0.0 {
+        false
+    } else if beta.is_infinite() {
+        delta_e > 0.0
+    } else {
+        rng.random::<f64>() > (-beta * delta_e).exp()
     }
 }
 

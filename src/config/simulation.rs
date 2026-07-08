@@ -84,10 +84,8 @@ impl Simulation {
                     if !step.is_finite() {
                         anyhow::bail!("temperature_range step ({step}) must be finite");
                     }
-                    if start <= 0.0 {
-                        anyhow::bail!(
-                            "temperature_range start ({start}) must be greater than zero"
-                        );
+                    if start < 0.0 {
+                        anyhow::bail!("temperature_range start ({start}) must be non-negative");
                     }
                     if step <= 0.0 {
                         anyhow::bail!("temperature_range step ({step}) must be positive");
@@ -112,9 +110,9 @@ impl Simulation {
             }
             (false, true) => {
                 for (index, temperature) in self.temperatures.iter().enumerate() {
-                    if !temperature.is_finite() || *temperature <= 0.0 {
+                    if !temperature.is_finite() || *temperature < 0.0 {
                         anyhow::bail!(
-                            "temperatures[{index}] ({temperature}) must be finite and greater than zero"
+                            "temperatures[{index}] ({temperature}) must be finite and non-negative"
                         );
                     }
                 }

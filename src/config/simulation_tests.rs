@@ -37,6 +37,12 @@ fn validate_temperatures_ok() {
 }
 
 #[test]
+fn validate_zero_temperature_ok() {
+    let mut s = simulation_with_temperatures(vec![0.0, 1.0]);
+    assert!(s.validate().is_ok());
+}
+
+#[test]
 fn validate_temperature_range_expands() {
     let mut s = simulation_with_temperature_range(1.0, 3.0, 1.0);
     assert!(s.validate().is_ok());
@@ -125,19 +131,26 @@ fn validate_temperature_range_non_finite_errors() {
 }
 
 #[test]
-fn validate_temperature_range_non_positive_start_errors() {
-    let mut s = simulation_with_temperature_range(0.0, 3.0, 1.0);
-    let err = s.validate().unwrap_err().to_string();
-    assert!(err.contains("start"));
-    assert!(err.contains("greater than zero"));
+fn validate_temperature_range_zero_start_expands() {
+    let mut s = simulation_with_temperature_range(0.0, 2.0, 1.0);
+    assert!(s.validate().is_ok());
+    assert_eq!(s.temperatures, vec![0.0, 1.0, 2.0]);
 }
 
 #[test]
-fn validate_non_positive_temperature_errors() {
-    let mut s = simulation_with_temperatures(vec![1.0, 0.0]);
+fn validate_temperature_range_negative_start_errors() {
+    let mut s = simulation_with_temperature_range(-1.0, 3.0, 1.0);
+    let err = s.validate().unwrap_err().to_string();
+    assert!(err.contains("start"));
+    assert!(err.contains("non-negative"));
+}
+
+#[test]
+fn validate_negative_temperature_errors() {
+    let mut s = simulation_with_temperatures(vec![1.0, -1.0]);
     let err = s.validate().unwrap_err().to_string();
     assert!(err.contains("temperatures[1]"));
-    assert!(err.contains("greater than zero"));
+    assert!(err.contains("non-negative"));
 }
 
 #[test]

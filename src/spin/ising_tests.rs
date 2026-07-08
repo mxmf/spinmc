@@ -124,6 +124,20 @@ fn wolff_probability_large_beta_approaches_one() {
 }
 
 #[test]
+fn wolff_probability_infinite_beta_positive_coupling_is_one() {
+    let s = IsingSpin { state: 1.0 };
+    let p = s.wolff_probability(&s, &s, f64::INFINITY, 1.0, 1.0, 1.0);
+    assert!((p - 1.0).abs() < 1e-10);
+}
+
+#[test]
+fn wolff_probability_infinite_beta_zero_coupling_is_zero() {
+    let s = IsingSpin { state: 1.0 };
+    let p = s.wolff_probability(&s, &s, f64::INFINITY, 0.0, 1.0, 1.0);
+    assert!((p - 0.0).abs() < 1e-10);
+}
+
+#[test]
 fn wolff_probability_zero_j() {
     let s = IsingSpin { state: 1.0 };
     let p = s.wolff_probability(&s, &s, 1.0, 0.0, 1.0, 1.0);

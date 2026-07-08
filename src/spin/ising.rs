@@ -74,7 +74,12 @@ impl SpinState for IsingSpin {
         self_magnitude: f64,
         other_magnitude: f64,
     ) -> f64 {
-        1.0 - (-2.0 * beta * j * self_magnitude * other_magnitude).exp()
+        let coupling = j * self_magnitude * other_magnitude;
+        if beta.is_infinite() {
+            if coupling > 0.0 { 1.0 } else { 0.0 }
+        } else {
+            1.0 - (-2.0 * beta * coupling).exp()
+        }
     }
 
     fn flip(&self, _axis: &Self) -> Self {

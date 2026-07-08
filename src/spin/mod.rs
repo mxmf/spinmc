@@ -85,7 +85,12 @@ pub trait SpinState:
         _self_magnitude: f64,
         _other_magnitude: f64,
     ) -> f64 {
-        1.0 - (-2.0 * beta * j * (self.dot(axis)) * (other.dot(axis))).exp()
+        let coupling = j * (self.dot(axis)) * (other.dot(axis));
+        if beta.is_infinite() {
+            if coupling > 0.0 { 1.0 } else { 0.0 }
+        } else {
+            1.0 - (-2.0 * beta * coupling).exp()
+        }
     }
 
     fn flip(&self, axis: &Self) -> Self;
