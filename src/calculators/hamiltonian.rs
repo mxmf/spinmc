@@ -21,12 +21,16 @@ impl Hamiltonian {
     pub fn new(config: &Config) -> Self {
         let exchange_enable = !config.parsed_exchange.is_empty();
         let anisotropy_enable = !config.parsed_anisotropy.is_empty();
+        let dm_enable = config
+            .parsed_exchange
+            .iter()
+            .any(|exchange| exchange.dm.is_some());
 
         let ham_config = HamiltonianConfig {
             exchange_enable,
             anisotropy_enable,
             zeeman_enable: false,
-            dm_enable: false,
+            dm_enable,
         };
         Self { config: ham_config }
     }
