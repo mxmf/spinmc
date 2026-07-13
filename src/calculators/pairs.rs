@@ -12,10 +12,7 @@ pub(crate) fn local_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) ->
     scalar_exchange_energy(spin, calc_input)
 }
 
-pub(crate) fn scalar_exchange_energy<S: SpinState>(
-    spin: &S,
-    calc_input: &CalcInput<S>,
-) -> f64 {
+pub(crate) fn scalar_exchange_energy<S: SpinState>(spin: &S, calc_input: &CalcInput<S>) -> f64 {
     let Some(neighbors) = calc_input.exchange_neighbors.as_ref() else {
         return 0.0;
     };

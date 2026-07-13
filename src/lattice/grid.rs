@@ -103,16 +103,11 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                 }
 
                 if let Some(dm) = exchange.dm {
-                    let d_strength = (dm[0] * dm[0] + dm[1] * dm[1] + dm[2] * dm[2])
-                        .sqrt();
+                    let d_strength = (dm[0] * dm[0] + dm[1] * dm[1] + dm[2] * dm[2]).sqrt();
                     let d_axis = if d_strength == 0.0 {
                         [0.0, 0.0, 0.0]
                     } else {
-                        [
-                            dm[0] / d_strength,
-                            dm[1] / d_strength,
-                            dm[2] / d_strength,
-                        ]
+                        [dm[0] / d_strength, dm[1] / d_strength, dm[2] / d_strength]
                     };
                     dm_neighbors.push((offset_index, d_axis, d_strength));
                 }
