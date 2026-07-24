@@ -96,7 +96,7 @@ impl fmt::Display for Config {
             writeln!(
                 f,
                 "  {:<4} | {:<3} | {:>3} {:>3} {:>3}  | {:>12}",
-                "from", "to", "x", "y", "z", "strength (eV)"
+                "from", "to", "x", "y", "z", "exchange"
             )?;
             for exchange in &self.parsed_exchange {
                 writeln!(f, "{exchange}")?;

@@ -23,11 +23,14 @@ fn parse_neighbor_order_with_structure() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.5,
+        j_scalar: Some(1.5),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&Some(structure), [true, true, false]).unwrap();
     assert!(!result.is_empty());
-    assert_eq!(result[0].strength, 1.5);
+    assert_eq!(result[0].j_scalar, Some(1.5));
 }
 
 #[test]
@@ -39,7 +42,10 @@ fn parse_neighbor_order_from_only() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 2.0,
+        j_scalar: Some(2.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&Some(structure), [true, true, false]).unwrap();
     assert!(!result.is_empty());
@@ -54,7 +60,10 @@ fn parse_neighbor_order_all() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&Some(structure), [true, true, false]).unwrap();
     assert!(!result.is_empty());
@@ -69,7 +78,10 @@ fn parse_neighbor_order_to_without_from_errors() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e
         .parse(&Some(structure), [true, true, false])
@@ -87,11 +99,14 @@ fn parse_distance_range_with_structure() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.5, 1.5]),
-        strength: 3.0,
+        j_scalar: Some(3.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&Some(structure), [true, true, false]).unwrap();
     assert!(!result.is_empty());
-    assert_eq!(result[0].strength, 3.0);
+    assert_eq!(result[0].j_scalar, Some(3.0));
 }
 
 #[test]
@@ -103,7 +118,10 @@ fn parse_distance_range_from_only() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.5, 1.5]),
-        strength: 3.0,
+        j_scalar: Some(3.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&Some(structure), [true, true, false]).unwrap();
     assert!(!result.is_empty());
@@ -119,7 +137,10 @@ fn parse_distance_range_all_sublattices() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.5, 1.5]),
-        strength: 3.0,
+        j_scalar: Some(3.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&Some(structure), [true, true, false]).unwrap();
     assert!(!result.is_empty());
@@ -136,7 +157,10 @@ fn parse_distance_range_to_without_from_errors() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.5, 1.5]),
-        strength: 3.0,
+        j_scalar: Some(3.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e
         .parse(&Some(structure), [true, true, false])
@@ -153,7 +177,10 @@ fn parse_without_selection_errors() {
         offsets: None,
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.parse(&None, [true, true, true]).unwrap_err().to_string();
     assert!(err.contains("must specify one"));
@@ -167,7 +194,10 @@ fn parse_with_multiple_selection_modes_errors() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.parse(&None, [true, true, true]).unwrap_err().to_string();
     assert!(err.contains("only one"));
@@ -181,7 +211,10 @@ fn validate_offsets_ok() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     assert!(e.validate(2).is_ok());
 }
@@ -194,7 +227,10 @@ fn validate_neighbor_order_ok() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     assert!(e.validate(2).is_ok());
 }
@@ -207,7 +243,10 @@ fn validate_distance_range_ok() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.0, 5.0]),
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     assert!(e.validate(2).is_ok());
 }
@@ -220,7 +259,10 @@ fn validate_none_specified_errors() {
         offsets: None,
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("exactly one"));
@@ -234,14 +276,17 @@ fn validate_multiple_specified_errors() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("exactly one"));
 }
 
 #[test]
-fn validate_non_finite_strength_errors() {
+fn validate_non_finite_j_scalar_errors() {
     for strength in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         let e = Exchange {
             from_sublattice: Some(0),
@@ -249,10 +294,13 @@ fn validate_non_finite_strength_errors() {
             offsets: Some(vec![[1, 0, 0]]),
             neighbor_order: None,
             distance_range: None,
-            strength,
+            j_scalar: Some(strength),
+            j_diagonal: None,
+            j_tensor: None,
+            dm: None,
         };
         let err = e.validate(1).unwrap_err().to_string();
-        assert!(err.contains("strength"));
+        assert!(err.contains("j_scalar"));
         assert!(err.contains("finite"));
     }
 }
@@ -265,9 +313,80 @@ fn validate_zero_strength_ok() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 0.0,
+        j_scalar: Some(0.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     assert!(e.validate(1).is_ok());
+}
+
+#[test]
+fn validate_dm_only_ok() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: Some(vec![[1, 0, 0]]),
+        neighbor_order: None,
+        distance_range: None,
+        j_scalar: None,
+        j_diagonal: None,
+        j_tensor: None,
+        dm: Some([0.0, 0.0, 1.0]),
+    };
+    assert!(e.validate(1).is_ok());
+}
+
+#[test]
+fn validate_dm_with_j_scalar_ok() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: Some(vec![[1, 0, 0]]),
+        neighbor_order: None,
+        distance_range: None,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: Some([0.0, 0.0, 1.0]),
+    };
+    assert!(e.validate(1).is_ok());
+}
+
+#[test]
+fn validate_dm_with_j_tensor_errors() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: Some(vec![[1, 0, 0]]),
+        neighbor_order: None,
+        distance_range: None,
+        j_scalar: None,
+        j_diagonal: None,
+        j_tensor: Some([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
+        dm: Some([0.0, 0.0, 1.0]),
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("j_tensor"));
+    assert!(err.contains("dm"));
+}
+
+#[test]
+fn validate_non_finite_dm_errors() {
+    let e = Exchange {
+        from_sublattice: Some(0),
+        to_sublattice: Some(0),
+        offsets: Some(vec![[1, 0, 0]]),
+        neighbor_order: None,
+        distance_range: None,
+        j_scalar: None,
+        j_diagonal: None,
+        j_tensor: None,
+        dm: Some([0.0, f64::NAN, 1.0]),
+    };
+    let err = e.validate(1).unwrap_err().to_string();
+    assert!(err.contains("dm[1]"));
+    assert!(err.contains("finite"));
 }
 
 #[test]
@@ -278,7 +397,10 @@ fn validate_empty_offsets_errors() {
         offsets: Some(vec![]),
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("offsets"));
@@ -293,7 +415,10 @@ fn validate_offsets_without_from_to_errors() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("from_sublattice"));
@@ -308,7 +433,10 @@ fn validate_neighbor_order_zero_errors() {
         offsets: None,
         neighbor_order: Some(0),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("neighbor_order"));
@@ -323,7 +451,10 @@ fn validate_neighbor_order_to_without_from_errors() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("from_sublattice"));
@@ -338,7 +469,10 @@ fn validate_from_sublattice_out_of_range() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(2).unwrap_err().to_string();
     assert!(err.contains("from_sublattice"));
@@ -353,7 +487,10 @@ fn validate_to_sublattice_out_of_range() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(2).unwrap_err().to_string();
     assert!(err.contains("to_sublattice"));
@@ -368,7 +505,10 @@ fn validate_distance_range_negative_min() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([-1.0, 5.0]),
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("minimum"));
@@ -387,7 +527,10 @@ fn validate_distance_range_non_finite_errors() {
             offsets: None,
             neighbor_order: None,
             distance_range: Some(distance_range),
-            strength: 1.0,
+            j_scalar: Some(1.0),
+            j_diagonal: None,
+            j_tensor: None,
+            dm: None,
         };
         let err = e.validate(1).unwrap_err().to_string();
         assert!(err.contains(expected));
@@ -403,7 +546,10 @@ fn validate_distance_range_max_less_than_min() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([5.0, 3.0]),
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("maximum"));
@@ -418,7 +564,10 @@ fn validate_distance_range_to_without_from_errors() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.0, 5.0]),
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.validate(1).unwrap_err().to_string();
     assert!(err.contains("from_sublattice"));
@@ -433,7 +582,10 @@ fn parse_offsets_without_from_to_errors() {
         offsets: Some(vec![[1, 0, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.parse(&None, [true, true, true]).unwrap_err().to_string();
     assert!(err.contains("from_sublattice"));
@@ -448,12 +600,15 @@ fn parse_offsets_ok() {
         offsets: Some(vec![[1, 0, 0], [0, 1, 0]]),
         neighbor_order: None,
         distance_range: None,
-        strength: 2.0,
+        j_scalar: Some(2.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let result = e.parse(&None, [true, true, true]).unwrap();
     assert_eq!(result.len(), 2);
     assert_eq!(result[0].offset, [1, 0, 0]);
-    assert_eq!(result[0].strength, 2.0);
+    assert_eq!(result[0].j_scalar, Some(2.0));
     assert_eq!(result[1].offset, [0, 1, 0]);
 }
 
@@ -465,7 +620,10 @@ fn parse_neighbor_order_without_structure_errors() {
         offsets: None,
         neighbor_order: Some(1),
         distance_range: None,
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.parse(&None, [true, true, true]).unwrap_err().to_string();
     assert!(err.contains("structure"));
@@ -479,7 +637,10 @@ fn parse_distance_range_without_structure_errors() {
         offsets: None,
         neighbor_order: None,
         distance_range: Some([0.0, 5.0]),
-        strength: 1.0,
+        j_scalar: Some(1.0),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let err = e.parse(&None, [true, true, true]).unwrap_err().to_string();
     assert!(err.contains("structure"));
@@ -491,7 +652,10 @@ fn display_parsed_exchange() {
         from_sub: 0,
         to_sub: 1,
         offset: [1, 0, -1],
-        strength: 0.5,
+        j_scalar: Some(0.5),
+        j_diagonal: None,
+        j_tensor: None,
+        dm: None,
     };
     let s = format!("{p}");
     assert!(s.contains("0.5"));
