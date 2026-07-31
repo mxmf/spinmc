@@ -16,7 +16,14 @@ pub struct Exchange {
     pub neighbor_order: Option<usize>,
     #[serde(default)]
     pub distance_range: Option<[f64; 2]>,
-    pub strength: f64,
+    #[serde(default, alias = "j", alias = "strength")]
+    pub j_scalar: Option<f64>,
+    #[serde(default, alias = "j_vec")]
+    pub j_diagonal: Option<[f64; 3]>,
+    #[serde(default)]
+    pub j_tensor: Option<[[f64; 3]; 3]>,
+    #[serde(default, alias = "dm_vector")]
+    pub dm: Option<[f64; 3]>,
 }
 
 #[derive(Debug)]
@@ -24,7 +31,10 @@ pub struct ParsedExchange {
     pub from_sub: usize,
     pub to_sub: usize,
     pub offset: [isize; 3],
-    pub strength: f64,
+    pub j_scalar: Option<f64>,
+    pub j_diagonal: Option<[f64; 3]>,
+    pub j_tensor: Option<[[f64; 3]; 3]>,
+    pub dm: Option<[f64; 3]>,
 }
 
 impl Exchange {
@@ -48,7 +58,10 @@ impl Exchange {
                         from_sub,
                         to_sub,
                         offset: *offset,
-                        strength: self.strength,
+                        j_scalar: self.j_scalar,
+                        j_diagonal: self.j_diagonal,
+                        j_tensor: self.j_tensor,
+                        dm: self.dm,
                     });
                 }
             }
@@ -72,7 +85,10 @@ impl Exchange {
                         from_sub: neighbor.from,
                         to_sub: neighbor.to,
                         offset: neighbor.offset,
-                        strength: self.strength,
+                        j_scalar: self.j_scalar,
+                        j_diagonal: self.j_diagonal,
+                        j_tensor: self.j_tensor,
+                        dm: self.dm,
                     });
                 }
             }
@@ -98,7 +114,10 @@ impl Exchange {
                         from_sub: distance.neighbor.from,
                         to_sub: distance.neighbor.to,
                         offset: distance.neighbor.offset,
-                        strength: self.strength,
+                        j_scalar: self.j_scalar,
+                        j_diagonal: self.j_diagonal,
+                        j_tensor: self.j_tensor,
+                        dm: self.dm,
                     });
                 }
             }
@@ -134,8 +153,51 @@ impl Exchange {
     }
 
     pub fn validate(&self, sublattices: usize) -> anyhow::Result<()> {
-        if !self.strength.is_finite() {
-            anyhow::bail!("exchange strength ({}) must be finite", self.strength);
+        let exchange_form_count = self.j_scalar.is_some() as usize
+            + self.j_diagonal.is_some() as usize
+            + self.j_tensor.is_some() as usize;
+        if exchange_form_count > 1 {
+            anyhow::bail!(
+                "at most one of `j_scalar` (`j`, `strength`), `j_diagonal` (`j_vec`), or `j_tensor` may be specified"
+            );
+        }
+        if exchange_form_count == 0 && self.dm.is_none() {
+            anyhow::bail!(
+                "at least one of `j_scalar` (`j`, `strength`), `j_diagonal` (`j_vec`), `j_tensor`, or `dm` (`dm_vector`) must be specified"
+            );
+        }
+        if self.j_tensor.is_some() && self.dm.is_some() {
+            anyhow::bail!("`j_tensor` and `dm` (`dm_vector`) cannot be specified together");
+        }
+        if let Some(j_scalar) = self.j_scalar
+            && !j_scalar.is_finite()
+        {
+            anyhow::bail!("j_scalar ({j_scalar}) must be finite");
+        }
+        if let Some(j_diagonal) = self.j_diagonal {
+            for (index, value) in j_diagonal.iter().enumerate() {
+                if !value.is_finite() {
+                    anyhow::bail!("j_diagonal[{index}] ({value}) must be finite");
+                }
+            }
+        }
+        if let Some(j_tensor) = self.j_tensor {
+            for (row_index, row) in j_tensor.iter().enumerate() {
+                for (col_index, value) in row.iter().enumerate() {
+                    if !value.is_finite() {
+                        anyhow::bail!(
+                            "j_tensor[{row_index}][{col_index}] ({value}) must be finite"
+                        );
+                    }
+                }
+            }
+        }
+        if let Some(dm) = self.dm {
+            for (index, value) in dm.iter().enumerate() {
+                if !value.is_finite() {
+                    anyhow::bail!("dm[{index}] ({value}) must be finite");
+                }
+            }
         }
 
         let specified = self.offsets.is_some() as usize
@@ -212,14 +274,26 @@ impl Exchange {
 
 impl fmt::Display for ParsedExchange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (from_sub, to_sub, strength, offset) =
-            (self.from_sub, self.to_sub, self.strength, self.offset);
+        let (from_sub, to_sub, offset) = (self.from_sub, self.to_sub, self.offset);
 
         write!(
             f,
-            "  {from_sub:<4} | {to_sub:<3} | {:>3} {:>3} {:>3}  | {strength:>8.12}",
+            "  {from_sub:<4} | {to_sub:<3} | {:>3} {:>3} {:>3}  | ",
             offset[0], offset[1], offset[2]
         )?;
+        if let Some(j_scalar) = self.j_scalar {
+            write!(f, "j_scalar={j_scalar:>8.12}")?;
+        } else if let Some(j_diagonal) = self.j_diagonal {
+            write!(f, "j_diagonal={j_diagonal:?}")?;
+        } else if let Some(j_tensor) = self.j_tensor {
+            write!(f, "j_tensor={j_tensor:?}")?;
+        }
+        if let Some(dm) = self.dm {
+            if self.j_scalar.is_some() || self.j_diagonal.is_some() || self.j_tensor.is_some() {
+                write!(f, ", ")?;
+            }
+            write!(f, "dm={dm:?}")?;
+        }
         Ok(())
     }
 }

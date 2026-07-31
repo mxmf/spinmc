@@ -65,27 +65,51 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
             let calc_input = &mut calc_inputs[index];
 
             let mut exchange_neighbors = vec![];
+            let mut dm_neighbors = vec![];
             for exchange in &config.parsed_exchange {
-                if exchange.from_sub == sublattice {
-                    let offset_coord = [
-                        exchange.offset[0] + x as isize,
-                        exchange.offset[1] + y as isize,
-                        exchange.offset[2] + z as isize,
-                    ];
+                if exchange.from_sub != sublattice {
+                    continue;
+                }
 
-                    let offset_index_opt = safe_coord_to_index(
-                        offset_coord,
-                        exchange.to_sub,
-                        dim,
-                        num_sublattices,
-                        config.grid.periodic_boundary,
+                let offset_coord = [
+                    exchange.offset[0] + x as isize,
+                    exchange.offset[1] + y as isize,
+                    exchange.offset[2] + z as isize,
+                ];
+
+                let Some(offset_index) = safe_coord_to_index(
+                    offset_coord,
+                    exchange.to_sub,
+                    dim,
+                    num_sublattices,
+                    config.grid.periodic_boundary,
+                ) else {
+                    continue;
+                };
+
+                let spin = &spins[offset_index] as *const S;
+                if let Some(j) = exchange.j_scalar {
+                    exchange_neighbors.push((spin, j));
+                    calc_input.exchange_neighbor_index.push(offset_index);
+                    calc_input.exchanges.push(j);
+                } else if exchange.j_diagonal.is_some() {
+                    unimplemented!("j_diagonal exchange energy is not implemented yet");
+                } else if exchange.j_tensor.is_some() {
+                    unimplemented!("j_tensor exchange energy is not implemented yet");
+                } else if exchange.dm.is_none() {
+                    unreachable!(
+                        "exchange validation requires at least one of j_scalar, j_diagonal, j_tensor, or dm"
                     );
-                    if let Some(offset_index) = offset_index_opt {
-                        exchange_neighbors
-                            .push((&spins[offset_index] as *const S, exchange.strength));
-                        calc_input.exchange_neighbor_index.push(offset_index);
-                        calc_input.exchanges.push(exchange.strength);
-                    }
+                }
+
+                if let Some(dm) = exchange.dm {
+                    let d_strength = (dm[0] * dm[0] + dm[1] * dm[1] + dm[2] * dm[2]).sqrt();
+                    let d_axis = if d_strength == 0.0 {
+                        [0.0, 0.0, 0.0]
+                    } else {
+                        [dm[0] / d_strength, dm[1] / d_strength, dm[2] / d_strength]
+                    };
+                    dm_neighbors.push((offset_index, d_axis, d_strength));
                 }
             }
 
@@ -97,6 +121,9 @@ impl<S: SpinState, R: rand::Rng> Grid<S, R> {
                 debug!("{:?}", calc_input.anisotropy);
             }
             calc_input.exchange_neighbors = Some(exchange_neighbors);
+            if !dm_neighbors.is_empty() {
+                calc_input.dm_neighbors = Some(dm_neighbors);
+            }
             calc_input.validate_exchange_neighbor()?;
         }
 
